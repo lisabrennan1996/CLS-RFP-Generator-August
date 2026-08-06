@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CLS Studio</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <div class="brand-strip">
+    <img class="brand-strip-mark" src="assets/lilly-logo.png" alt="Lilly" />
+    <div class="brand-strip-divider"></div>
+    <span class="brand-strip-name">CLS Studio</span>
+  </div>
+
+  <div class="title-bar">
+    <button class="sidebar-toggle" id="homeBtn" type="button" title="Back to main screen">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11l8-7 8 7"></path><path d="M6 9.5V20a1 1 0 001 1h10a1 1 0 001-1V9.5"></path><path d="M10 21v-6h4v6"></path></svg>
+    </button>
+    <button class="sidebar-toggle" id="sidebarToggleBtn" type="button" title="Collapse/expand sidebar">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1"></rect><line x1="9" y1="4" x2="9" y2="20"></line></svg>
+    </button>
+    <div class="title-bar-text">
+      <span class="title-bar-title">RFP Generator</span>
+      <span class="title-bar-subtitle">Central Laboratories</span>
+    </div>
+    <div class="title-bar-spacer"></div>
+    <button class="btn btn-primary" id="generateRfpBtn" type="button">Generate RFP</button>
+  </div>
+
+  <div class="app-body">
+    <aside class="nav-rail" id="navRail">
+      <nav class="nav-list">
+        <button class="nav-item active" data-section="intake" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8l8-5 8 5"></path><path d="M4 8v10a1 1 0 001 1h14a1 1 0 001-1V8"></path><path d="M4 8l4 3h8l4-3"></path></svg>
+          <span class="nav-item-label">Intake</span>
+        </button>
+        <button class="nav-item" data-section="information" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="4" width="12" height="17" rx="1"></rect><rect x="9" y="2.3" width="6" height="3" rx="0.5"></rect><line x1="9" y1="10" x2="15" y2="10"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+          <span class="nav-item-label">Information</span>
+        </button>
+        <button class="nav-item" data-section="countries" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="4" ry="9"></ellipse><line x1="3" y1="12" x2="21" y2="12"></line></svg>
+          <span class="nav-item-label">Countries</span>
+        </button>
+        <button class="nav-item" data-section="schedule" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="16" rx="1"></rect><line x1="4" y1="9" x2="20" y2="9"></line><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line></svg>
+          <span class="nav-item-label">Schedule of Activities</span>
+        </button>
+        <button class="nav-item" data-section="analytes" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 15l6-6"></path><path d="M8 13l-2 2a3 3 0 004 4l2-2"></path><path d="M16 11l2-2a3 3 0 00-4-4l-2 2"></path></svg>
+          <span class="nav-item-label">Analytes</span>
+        </button>
+        <button class="nav-item" data-section="specimen" type="button">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3h6"></path><path d="M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"></path></svg>
+          <span class="nav-item-label">Specimens</span>
+        </button>
+      </nav>
+
+      <!-- Replaces the 6-section nav while table work is active (parsing results shown, or
+      cropping) -- see updateTableWorkLayout/tableWorkActive in app.js. -->
+      <div class="nav-thumbnail-rail" id="navThumbnailRail" hidden>
+        <p class="nav-note nav-thumbnail-hint">Click a page to preview it &mdash; use the checkbox
+        to select pages for combining.</p>
+        <div class="nav-thumbnail-toolbar">
+          <button class="btn btn-ghost" id="thumbnailsTablesOnlyBtn" type="button">Tables Only</button>
+          <button class="btn btn-ghost" id="expandThumbnailsBtn" type="button">Expand View</button>
+          <button class="btn btn-ghost" id="showSectionsBtn" type="button" title="Switch back to Intake/Information/Countries/etc.">&#9776; Sections</button>
+        </div>
+        <div class="nav-thumbnail-scroll" id="navThumbnailScroll"></div>
+        <div class="nav-thumbnail-actions" id="navThumbnailActions">
+          <span id="combineSelectedCount">0 selected</span>
+          <select class="text-input" id="masterTableNameInput">
+            <option value="" disabled selected>Select type&hellip;</option>
+            <option value="SoA">SoA</option>
+            <option value="Lab Appendix">Lab Appendix</option>
+            <option value="LTS">LTS</option>
+            <option value="Referral Lab">Referral Lab</option>
+            <option value="__custom__">Custom&hellip;</option>
+          </select>
+          <input class="text-input" id="masterTableCustomNameInput" placeholder="Table name" hidden />
+          <button class="btn" id="queueGroupBtn" type="button" disabled>+ Queue Group</button>
+          <div class="queued-groups-list" id="queuedGroupsList" hidden></div>
+          <button class="btn btn-primary btn-block" id="cropMergeAllBtn" type="button" disabled>Crop &amp; Merge All</button>
+          <button class="btn btn-ghost" id="cancelCombineBtn" type="button">Clear</button>
+        </div>
+      </div>
+      <div class="nav-rail-resize-handle" id="navRailResizeHandle" title="Drag to resize"></div>
+    </aside>
+
+    <main class="main">
+      <div class="section-header">
+        <h1 class="section-title" id="sectionTitle">Intake</h1>
+      </div>
+
+      <!-- ================= INTAKE ================= -->
+      <div class="section-body" id="sectionIntake" data-section-panel="intake">
+
+        <div class="screen" id="workspaceScreen">
+        <section class="workspace">
+          <div class="panel source-panel">
+            <button class="source-panel-expand" id="sourcePanelExpandBtn" type="button" title="Show protocol upload/attachments" hidden>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"></path></svg>
+            </button>
+            <div class="model-status" id="modelStatus">
+              <span class="status-dot status-checking" id="modelStatusDot"></span>
+              <span id="modelStatusText">Checking&hellip;</span>
+            </div>
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-source-tab="upload">Upload</button>
+              <button class="tab" data-source-tab="url">URL</button>
+            </div>
+
+            <div class="source-tab-panel" data-source-panel="upload">
+              <div class="dropzone" id="dropzone">
+                <button class="btn btn-block" id="browseBtn" type="button" title="Drag a file here, or click to browse">+ Protocol</button>
+              </div>
+              <p class="supported-types">PDF (native/digital &mdash; must have a real text layer) or Word (.docx/.doc &mdash; converted to PDF automatically)</p>
+              <div class="picked-file" id="pickedFile" hidden>
+                <span id="pickedFileName"></span>
+                <button class="icon-btn" id="clearFileBtn" type="button" title="Remove file">&times;</button>
+              </div>
+            </div>
+
+            <div class="source-tab-panel" data-source-panel="url" hidden>
+              <p class="nav-note">Local file processing only in this build &mdash; paste a path to a
+              file already on this machine.</p>
+              <input class="text-input" id="urlInput" placeholder="C:\path\to\document.pdf" />
+              <button class="btn" id="fetchUrlBtn" type="button">Use path</button>
+            </div>
+
+            <div class="source-optional-attachments">
+              <h4>Optional attachments</h4>
+              <p class="nav-note">Attach these now, before combining tables &mdash; one continuous
+              pass, no need to come back for them later.</p>
+              <button class="btn btn-block" id="attachDesignElementsBtn" type="button" title="Optional — drives design/ops fields">+ Design Elements</button>
+
+              <div class="source-specimen-source">
+                <h5>Referral Lab &amp; Storage Samples &mdash; choose one source</h5>
+                <div class="specimen-source-option">
+                  <div class="specimen-source-row">
+                    <button class="btn btn-block" id="attachPreviousRfpBtn" type="button" title="Optional — carries over Referral Lab &amp; Storage Samples data">+ Previous RFP</button>
+                    <button class="icon-btn" id="clearPreviousRfpBtn" type="button" title="Remove Previous RFP" hidden>&times;</button>
+                  </div>
+                </div>
+                <p class="nav-note specimen-source-or">&mdash; or &mdash;</p>
+                <div class="specimen-source-option">
+                  <button class="btn btn-block" id="attachClipsNonPkpdBtn" type="button" title="Optional — fills Referral/Storage Samples directly from these worksheets, instead of a Previous RFP">+ Add CLIPS/Non-PKPD worksheet(s)</button>
+                  <input type="file" id="clipsNonPkpdFileInput" multiple hidden accept=".pdf,.docx,.doc" />
+                  <div class="clips-nonpkpd-list" id="clipsNonPkpdList" hidden></div>
+                </div>
+                <p class="nav-note specimen-source-hint" id="specimenSourceHint" hidden></p>
+              </div>
+            </div>
+
+            <div class="intake-study-details" id="rfpStudyDetails">
+              <div class="intake-study-details-title">Study details</div>
+              <div class="rfp-study-field">
+                <label for="studyOncologySelect">Oncology study?</label>
+                <select class="text-input" id="studyOncologySelect">
+                  <option value="">Auto-detect</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div class="rfp-study-field" id="studyImmunoOncologyWrap">
+                <label for="studyImmunoOncologySelect">Immuno Oncology protocol?</label>
+                <select class="text-input" id="studyImmunoOncologySelect">
+                  <option value="">Select&hellip;</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <label class="checkbox-row inline" id="studyDecentralizedWrap">
+                <input type="checkbox" id="studyDecentralizedCb" />
+                <span>Decentralized trial elements?</span>
+              </label>
+              <label class="checkbox-row inline" id="studyPenaltiesWrap">
+                <input type="checkbox" id="studyPenaltiesCb" />
+                <span>Penalties &amp; Incentives metrics apply?</span>
+              </label>
+              <label class="checkbox-row inline" id="studyAnatomicPathologyWrap">
+                <input type="checkbox" id="studyAnatomicPathologyCb" />
+                <span>Anatomic Pathology / histology samples?</span>
+              </label>
+              <div class="rfp-study-field">
+                <label for="studyHepaticSelect">Hepatic monitoring algorithm</label>
+                <select class="text-input" id="studyHepaticSelect">
+                  <option value="Non-oncology">Non-oncology</option>
+                  <option value="Oncology">Oncology</option>
+                  <option value="Oncology w/ ICI">Oncology w/ ICI</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel config-results-panel">
+            <div class="thumbnails-collapsed-banner" id="thumbnailsCollapsedBanner" hidden>
+              <span>Page thumbnails are hidden while you're viewing the section tabs.</span>
+              <button class="btn btn-ghost" id="showThumbnailsBtn" type="button">Show page thumbnails</button>
+            </div>
+            <div class="tabs" role="tablist">
+              <button class="tab active" data-panel-tab="configuration">Configuration</button>
+              <button class="tab" data-panel-tab="results">Results</button>
+            </div>
+
+            <div class="panel-body" data-panel="configuration">
+              <div class="field">
+                <label for="pageRangeInput">Page range</label>
+                <input class="text-input" id="pageRangeInput" placeholder="e.g. 0-2,4" />
+              </div>
+
+              <div class="field-group" id="regionStep" hidden>
+                <h3>Table Region <small id="regionPageLabel"></small></h3>
+                <p class="nav-note">Drag on the preview to draw a box around a table (optional) &mdash;
+                leave blank to auto-detect the table on this page.</p>
+                <div class="region-preview-wrap" id="regionPreviewWrap">
+                  <img id="regionPreviewImage" alt="Page preview" draggable="false" />
+                  <svg id="regionOverlay" class="region-overlay"></svg>
+                </div>
+                <div class="region-controls">
+                  <button class="btn btn-ghost" id="regionPrevBtn" type="button">&larr; Prev</button>
+                  <button class="btn btn-ghost" id="regionNextBtn" type="button">Next &rarr;</button>
+                  <button class="btn" id="regionClearBtn" type="button">Clear region (autodetect)</button>
+                  <button class="btn btn-ghost" id="regionTablesOnlyBtn" type="button">Tables Only</button>
+                </div>
+                <p class="nav-note" id="regionTablesOnlyHint" hidden></p>
+              </div>
+
+              <button class="btn btn-primary btn-block" id="parseBtn" type="button" disabled>Parse Document</button>
+              <p class="error-text" id="configError" hidden></p>
+            </div>
+
+            <div class="panel-body" data-panel="results" hidden>
+              <div class="results-toolbar">
+                <div class="tabs" role="tablist">
+                  <button class="tab active" data-result-tab="markdown">Markdown</button>
+                  <button class="tab" data-result-tab="blocks">Blocks</button>
+                  <button class="tab" data-result-tab="json">JSON</button>
+                  <button class="tab" data-result-tab="html">HTML</button>
+                </div>
+                <label class="checkbox-row inline" id="renderHtmlToggleWrap">
+                  <input type="checkbox" id="renderHtmlToggle" checked />
+                  <span>Render HTML</span>
+                </label>
+              </div>
+
+              <div class="page-nav" id="pageNav">
+                <button class="btn btn-ghost" id="prevPageBtn" type="button" disabled>&larr; Prev</button>
+                <span id="pageIndicator">Page 1 / 1</span>
+                <button class="btn btn-ghost" id="nextPageBtn" type="button" disabled>Next &rarr;</button>
+              </div>
+
+              <div class="result-tab-panel" data-result-panel="markdown">
+                <div class="output-toolbar">
+                  <button class="btn" data-copy="markdown" type="button">Copy</button>
+                  <button class="btn" data-download="markdown" type="button">Download .md</button>
+                </div>
+                <pre class="code-block" id="markdownOutput"></pre>
+              </div>
+
+              <div class="result-tab-panel" data-result-panel="blocks" hidden>
+                <div class="blocks-view" id="blocksView">
+                  <div class="blocks-image-pane">
+                    <div class="image-wrap" id="imageWrap">
+                      <img id="pageImage" alt="Page preview" />
+                      <svg id="bboxOverlay" class="bbox-overlay"></svg>
+                    </div>
+                    <button class="chip active" id="bboxToggleChip" type="button">Bboxes</button>
+                  </div>
+                  <div class="blocks-list-pane" id="blocksList">
+                    <p class="empty-hint">Detected/drawn table regions appear here &mdash; prose text isn't split into blocks.</p>
+                  </div>
+                </div>
+                <div class="selection-actionbar" id="selectionActionBar" hidden>
+                  <span id="selectionCount">0 selected</span>
+                  <button class="btn btn-secondary" id="highlightSelectionBtn" type="button">Highlight vs original</button>
+                  <div class="export-group">
+                    <button class="btn" data-export-format="markdown" type="button">Export Markdown</button>
+                    <button class="btn" data-export-format="json" type="button">Export JSON</button>
+                    <button class="btn" data-export-format="html" type="button">Export HTML</button>
+                  </div>
+                  <button class="icon-btn" id="clearSelectionBtn" type="button" title="Clear selection">&times;</button>
+                </div>
+              </div>
+
+              <div class="result-tab-panel" data-result-panel="json" hidden>
+                <div class="output-toolbar">
+                  <button class="btn" data-copy="json" type="button">Copy</button>
+                  <button class="btn" data-download="json" type="button">Download .json</button>
+                </div>
+                <pre class="code-block" id="jsonOutput"></pre>
+              </div>
+
+              <div class="result-tab-panel" data-result-panel="html" hidden>
+                <div class="output-toolbar">
+                  <button class="btn" data-copy="html" type="button">Copy</button>
+                  <button class="btn" data-download="html" type="button">Download .html</button>
+                </div>
+                <pre class="code-block" id="htmlOutput"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div>
+
+        <div class="screen master-table-screen" id="masterTableScreen" hidden>
+          <header class="topbar">
+            <div class="topbar-left">
+              <button class="btn btn-ghost" id="backToResultsBtn" type="button">&larr; Back to Results</button>
+              <span class="crumb">Master Tables built this session</span>
+            </div>
+            <div class="topbar-right export-group">
+              <button class="btn" id="exportMasterJsonBtn" type="button">Export JSON</button>
+              <button class="btn" id="exportMasterMarkdownBtn" type="button">Export Markdown</button>
+              <button class="btn" id="exportMasterHtmlBtn" type="button">Export HTML</button>
+            </div>
+          </header>
+          <p class="nav-note rfp-attachments-status" id="rfpAttachmentsStatus"></p>
+          <div class="master-table-body">
+            <aside class="master-table-sidebar">
+              <h4>Master Tables</h4>
+              <div class="master-table-list" id="masterTableList"></div>
+            </aside>
+            <div class="master-table-main">
+              <div class="master-table-grid-wrap" id="masterTableGrid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen" id="tableCropScreen" hidden>
+          <header class="topbar">
+            <div class="topbar-left">
+              <button class="btn btn-ghost" id="backToWorkspaceFromCropBtn" type="button">&larr; Back</button>
+              <span class="crumb">Crop Tables — <span id="cropTableName"></span></span>
+            </div>
+          </header>
+          <div class="table-crop-body">
+            <p class="nav-note">Drag on the preview to draw a precise box around the table on this
+            page &mdash; leave blank to use whatever was already auto-detected. Draw more than one
+            box to combine separate rows from the same page (e.g. the header row and a data row
+            further down) into a single table.</p>
+            <div class="region-preview-wrap" id="cropPreviewWrap">
+              <img id="cropPreviewImage" alt="Page preview" draggable="false" />
+              <svg id="cropOverlay" class="region-overlay"></svg>
+            </div>
+            <div class="region-controls">
+              <button class="btn btn-ghost" id="cropPrevBtn" type="button">&larr; Prev</button>
+              <span id="cropPageLabel"></span>
+              <button class="btn btn-ghost" id="cropNextBtn" type="button">Next &rarr;</button>
+              <button class="btn" id="cropClearBtn" type="button">Clear region (autodetect)</button>
+            </div>
+            <button class="btn btn-primary btn-block" id="confirmCropMergeBtn" type="button">Merge into table</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= INFORMATION ================= -->
+      <div class="section-body" id="sectionInformation" data-section-panel="information" hidden>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Sponsor Contacts</span>
+          </div>
+          <p class="empty-hint" id="sponsorContactCount"></p>
+          <div id="sponsorContactList"></div>
+          <button class="btn btn-dashed" id="addSponsorContactBtn" type="button">+ Add sponsor contact</button>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Budget &amp; Timeline</div>
+          <div class="field">
+            <label for="dateSubmittedInput">Date RFP submitted</label>
+            <input class="text-input required-input" id="dateSubmittedInput" placeholder="DD-MMM-YYYY (blank = today)" />
+          </div>
+          <div class="field">
+            <label for="dateBudgetInput">Date budget required</label>
+            <input class="text-input required-input" id="dateBudgetInput" placeholder="DD-MMM-YYYY (blank = +10 business days)" />
+          </div>
+          <div class="toggle-row">
+            <span>Will RFP be submitted for other studies in this program?</span>
+            <label class="switch">
+              <input type="checkbox" id="otherStudiesToggle" />
+              <span class="switch-track"><span class="switch-knob"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Protocol Details</div>
+          <div class="field">
+            <label for="protocolNumberInput">Protocol number</label>
+            <input class="text-input" id="protocolNumberInput" placeholder="e.g. H8H-MC-LAHD (blank = auto-extracted)" />
+          </div>
+          <div class="field">
+            <label>Phase</label>
+            <div class="segmented-group" id="phaseSegmented">
+              <button class="segmented-btn" data-phase="I" type="button">I</button>
+              <button class="segmented-btn" data-phase="II" type="button">II</button>
+              <button class="segmented-btn" data-phase="III" type="button">III</button>
+              <button class="segmented-btn" data-phase="IV" type="button">IV</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="therapeuticAreaInput">Therapeutic area</label>
+            <input class="text-input" id="therapeuticAreaInput" placeholder="e.g. Oncology (blank = auto-extracted)" />
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= COUNTRIES ================= -->
+      <div class="section-body" id="sectionCountries" data-section-panel="countries" hidden>
+        <div class="card">
+          <div class="card-label">Country Allocation</div>
+          <p class="empty-hint">Optional &mdash; overrides whatever's auto-extracted from Design Elements.</p>
+          <div class="chip-list" id="countryChipList"></div>
+          <div class="chip-add-row">
+            <input class="text-input" id="countryChipInput" placeholder="Add a country" />
+            <button class="btn btn-primary" id="addCountryBtn" type="button">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= SCHEDULE OF ACTIVITIES ================= -->
+      <div class="section-body" id="sectionSchedule" data-section-panel="schedule" hidden>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-label">Schedule of Activities</span>
+            <button class="btn" id="regenerateMasterSoaBtn" type="button">Regenerate consolidated schedule</button>
+          </div>
+          <div id="scheduleTablePreview"></div>
+        </div>
+      </div>
+
+      <!-- ================= ANALYTES ================= -->
+      <div class="section-body" id="sectionAnalytes" data-section-panel="analytes" hidden>
+        <div class="card">
+          <div class="card-label">Analytes (Lab Appendix)</div>
+          <div id="analytesTablePreview"></div>
+        </div>
+      </div>
+
+      <!-- ================= SPECIMENS ================= -->
+      <div class="section-body" id="sectionSpecimen" data-section-panel="specimen" hidden>
+        <div class="card">
+          <div class="card-label">Referral Lab / Storage Samples</div>
+          <p class="nav-note" id="specimenPreviousRfpStatus">Previous RFP: not attached</p>
+          <div id="specimenTablePreview"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Storage &amp; Shipping</div>
+          <div class="field">
+            <label>Storage conditions</label>
+            <div class="segmented-group" id="storageConditionsSegmented">
+              <button class="segmented-btn" data-storage="Ambient" type="button">Ambient</button>
+              <button class="segmented-btn" data-storage="Refrigerated (2–8°C)" type="button">Refrigerated (2&ndash;8&deg;C)</button>
+              <button class="segmented-btn" data-storage="Frozen (-20°C)" type="button">Frozen (-20&deg;C)</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="shippingFrequencyInput">Shipping frequency</label>
+            <input class="text-input" id="shippingFrequencyInput" placeholder="e.g. Weekly courier pickup" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-label">Kit, Results &amp; Data Transfer</div>
+          <div class="field">
+            <label>Kit type</label>
+            <div class="segmented-group" id="kitTypeSegmented">
+              <button class="segmented-btn" data-kit="Standard collection kit" type="button">Standard collection kit</button>
+              <button class="segmented-btn" data-kit="Custom kit" type="button">Custom kit</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="dataTransferFormatInput">Data transfer format</label>
+            <input class="text-input" id="dataTransferFormatInput" placeholder="e.g. SDTM, weekly transfer" />
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-backdrop thumbnail-modal-backdrop" id="thumbnailModalBackdrop" hidden>
+  <div class="thumbnail-modal">
+    <div class="thumbnail-modal-header">
+      <span>Page Previews</span>
+      <button class="icon-btn" id="thumbnailModalCloseBtn" type="button" title="Close">&times;</button>
+    </div>
+    <div class="thumbnail-modal-grid" id="thumbnailModalGrid"></div>
+    <div class="thumbnail-modal-nav">
+      <button class="btn btn-ghost" id="thumbnailModalPrevBtn" type="button">&larr; Prev</button>
+      <span id="thumbnailModalPageLabel"></span>
+      <button class="btn btn-ghost" id="thumbnailModalNextBtn" type="button">Next &rarr;</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="blocks-view.js"></script>
+<script src="master-schedule.js"></script>
+<script src="master-table.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

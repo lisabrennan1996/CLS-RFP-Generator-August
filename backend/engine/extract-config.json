@@ -1,0 +1,1909 @@
+{
+  "data_schema": {
+    "type": "object",
+    "properties": {
+      "general_information": {
+        "description": "General administrative and contact information for the RFP.",
+        "type": "object",
+        "properties": {
+          "lilly_requestor_name": {
+            "description": "Name of the Lilly requestor contact.",
+            "type": "string"
+          },
+          "lilly_requestor_email": {
+            "description": "Email of the Lilly requestor contact.",
+            "type": "string"
+          },
+          "lilly_requestor_phone": {
+            "description": "Phone number of the Lilly requestor contact.",
+            "type": "string"
+          },
+          "date_rfp_submitted": {
+            "description": "Date the RFP was submitted. Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "date_budget_required": {
+            "description": "Date the budget response is required. Standard is 10 business days from RFP submission. Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "rfp_for_other_studies_in_program": {
+            "description": "Indicates if an RFP will be submitted for other studies in this program.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "other_studies_in_program_list": {
+            "description": "List of other studies in the program for which an RFP will be submitted, if applicable. Indicate N/A if not applicable.",
+            "anyOf": [
+              {
+                "description": "List of other studies in the program for which an RFP will be submitted, if applicable. Indicate N/A if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vendor_supported_protocols": {
+            "description": "List of 2-3 protocols for the same compound previously supported by this vendor. Indicate N/A if not applicable.",
+            "anyOf": [
+              {
+                "description": "List of 2-3 protocols for the same compound previously supported by this vendor. Indicate N/A if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "blood_volume_summary_required": {
+            "description": "Indicates if a Blood Volume per Visit Summary is required (e.g., for China and Pediatric studies).",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "protocol_specific_aspects": {
+            "description": "List any protocol-specific aspects essential for the vendor to understand (e.g., unusual TAT needs, reporting requirements). Indicate N/A if none.",
+            "anyOf": [
+              {
+                "description": "List any protocol-specific aspects essential for the vendor to understand (e.g., unusual TAT needs, reporting requirements). Indicate N/A if none.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lilly_requestor_name",
+          "lilly_requestor_email",
+          "lilly_requestor_phone",
+          "date_rfp_submitted",
+          "date_budget_required",
+          "rfp_for_other_studies_in_program",
+          "other_studies_in_program_list",
+          "vendor_supported_protocols",
+          "blood_volume_summary_required",
+          "protocol_specific_aspects"
+        ],
+        "additionalProperties": false
+      },
+      "protocol_information": {
+        "description": "Details about the study protocol.",
+        "type": "object",
+        "properties": {
+          "protocol_alias": {
+            "description": "The alias or identifier for the protocol (e.g., XXX-XX-XXXX).",
+            "type": "string"
+          },
+          "protocol_title": {
+            "description": "Full title of the protocol.",
+            "type": "string"
+          },
+          "compound": {
+            "description": "Name of the compound being studied.",
+            "type": "string"
+          },
+          "phase": {
+            "description": "Clinical trial phase (e.g., Phase 1, Phase 2, Phase 3).",
+            "type": "string"
+          },
+          "therapeutic_area": {
+            "description": "Therapeutic area of the study.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol_alias",
+          "protocol_title",
+          "compound",
+          "phase",
+          "therapeutic_area"
+        ],
+        "additionalProperties": false
+      },
+      "trial_milestones": {
+        "description": "Key dates and duration for the trial.",
+        "type": "object",
+        "properties": {
+          "protocol_approval_date": {
+            "description": "Date of Protocol Approval (PA). Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "planned_first_patient_visit_date": {
+            "description": "Planned date for the First Patient Visit (FPV). Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "planned_last_patient_visit_date": {
+            "description": "Planned date for the Last Patient Visit (LPV). Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "protocol_duration_months": {
+            "description": "Duration of the protocol in months (from FPV to DBL - Database Lock).",
+            "type": "number"
+          },
+          "country_initial_fpv_planned": {
+            "description": "Country where the initial FPV is planned.",
+            "type": "string"
+          },
+          "initial_siv_date": {
+            "description": "Initial Site Initiation Visit (SIV) date, if known. Format: YYYY-MM-DD.",
+            "anyOf": [
+              {
+                "description": "Initial Site Initiation Visit (SIV) date, if known. Format: YYYY-MM-DD.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first_deliverable": {
+            "description": "Description of the first deliverable.",
+            "type": "string"
+          },
+          "first_deliverable_date": {
+            "description": "Date of the first deliverable. Format: YYYY-MM-DD.",
+            "type": "string"
+          },
+          "other_documents_required_prior_dbl": {
+            "description": "Indicates if documents other than the first deliverable are required prior to final database completion.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "other_documents_list": {
+            "description": "List of other required documents, if applicable.",
+            "anyOf": [
+              {
+                "description": "List of other required documents, if applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "protocol_approval_date",
+          "planned_first_patient_visit_date",
+          "planned_last_patient_visit_date",
+          "protocol_duration_months",
+          "country_initial_fpv_planned",
+          "initial_siv_date",
+          "first_deliverable",
+          "first_deliverable_date",
+          "other_documents_required_prior_dbl",
+          "other_documents_list"
+        ],
+        "additionalProperties": false
+      },
+      "investigator_training": {
+        "description": "Details regarding central lab investigator training support.",
+        "type": "object",
+        "properties": {
+          "training_support_type": {
+            "description": "Type of central lab investigator training support required.",
+            "type": "string"
+          },
+          "training_slides_required_date": {
+            "description": "Date training slides are required. Format: YYYY-MM-DD.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "training_support_type",
+          "training_slides_required_date"
+        ],
+        "additionalProperties": false
+      },
+      "pediatric_considerations": {
+        "description": "Specific considerations for pediatric trial populations.",
+        "type": "object",
+        "properties": {
+          "includes_pediatric_population": {
+            "description": "Indicates if the protocol includes a pediatric trial population (≤18 years old).",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "pediatric_max_blood_volume_per_visit": {
+            "description": "Maximum blood volume allowed per visit per protocol for pediatric patients, if known. Indicate 'not known' or 'N/A' if not applicable.",
+            "anyOf": [
+              {
+                "description": "Maximum blood volume allowed per visit per protocol for pediatric patients, if known. Indicate 'not known' or 'N/A' if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pediatric_testing_prioritization": {
+            "description": "If number of tests/visit exceeds anticipated max blood volume for pediatric patients, indicate which testing should be prioritized. Indicate 'not known' or 'N/A' if not applicable.",
+            "anyOf": [
+              {
+                "description": "If number of tests/visit exceeds anticipated max blood volume for pediatric patients, indicate which testing should be prioritized. Indicate 'not known' or 'N/A' if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "includes_pediatric_population",
+          "pediatric_max_blood_volume_per_visit",
+          "pediatric_testing_prioritization"
+        ],
+        "additionalProperties": false
+      },
+      "oncology_considerations": {
+        "description": "Specific considerations for oncology protocols.",
+        "type": "object",
+        "properties": {
+          "is_immuno_oncology_protocol": {
+            "description": "Indicates if this is an Immuno Oncology protocol.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "is_us_oncology_involved": {
+            "description": "Indicates if US Oncology is involved in the study.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          }
+        },
+        "required": [
+          "is_immuno_oncology_protocol",
+          "is_us_oncology_involved"
+        ],
+        "additionalProperties": false
+      },
+      "decentralized_trials": {
+        "description": "Information regarding decentralized or virtual trial services.",
+        "type": "object",
+        "properties": {
+          "lab_collections_via_mobile_nursing": {
+            "description": "Indicates if any lab collections will be done in home via mobile nursing vendor.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "lilly_manage_mobile_nursing_contract": {
+            "description": "If mobile nursing is used, indicates if Lilly will manage the contract with the mobile nursing vendor.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "mobile_nursing_vendor_name": {
+            "description": "Name of the mobile nursing vendor, if applicable.",
+            "anyOf": [
+              {
+                "description": "Name of the mobile nursing vendor, if applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "samples_shipped_direct_from_home_to_central_lab": {
+            "description": "Indicates if samples will be shipped directly from patient homes to central lab utilizing central lab contracted courier.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "visits_testing_collected_in_home": {
+            "description": "List of visits/testing that could be collected in home via mobile nursing vendor. Indicate N/A if not applicable.",
+            "anyOf": [
+              {
+                "description": "List of visits/testing that could be collected in home via mobile nursing vendor. Indicate N/A if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "other_decentralized_services_required": {
+            "description": "Indicates if any other decentralized/virtual trial services will be required.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "other_decentralized_services_list": {
+            "description": "List of any other decentralized services required, if applicable. Indicate N/A if not applicable.",
+            "anyOf": [
+              {
+                "description": "List of any other decentralized services required, if applicable. Indicate N/A if not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lab_collections_via_mobile_nursing",
+          "lilly_manage_mobile_nursing_contract",
+          "mobile_nursing_vendor_name",
+          "samples_shipped_direct_from_home_to_central_lab",
+          "visits_testing_collected_in_home",
+          "other_decentralized_services_required",
+          "other_decentralized_services_list"
+        ],
+        "additionalProperties": false
+      },
+      "penalties_and_incentives": {
+        "description": "Information regarding inclusion of penalties and incentives (P/I) in the study.",
+        "type": "object",
+        "properties": {
+          "require_pi_inclusion": {
+            "description": "Indicates if this study will require inclusion of Penalties/Incentives (P/I).",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "key_analytes_critical_tat": {
+            "description": "Indicates if there are key analytes that require critical testing turnaround time or special considerations.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "key_analytes_details": {
+            "description": "List of key analytes, testing TAT expectations, and special considerations, if applicable.",
+            "anyOf": [
+              {
+                "description": "List of key analytes, testing TAT expectations, and special considerations, if applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metrics_in_scope": {
+            "description": "List of metrics in scope for penalties and incentives.",
+            "anyOf": [
+              {
+                "description": "List of metrics in scope for penalties and incentives.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "measure": {
+                      "description": "Name of the measure (e.g., Initial Resupply Shipment).",
+                      "type": "string"
+                    },
+                    "metric_description": {
+                      "description": "Description of the metric.",
+                      "type": "string"
+                    },
+                    "incentive_applicable": {
+                      "description": "Indicates if incentive is applicable (Up to a total of 2.5% Direct Costs).",
+                      "type": "string",
+                      "enum": [
+                        "NA",
+                        "Select"
+                      ]
+                    },
+                    "penalty_applicable": {
+                      "description": "Indicates if penalty is applicable (Up to a total of 5% Direct Costs).",
+                      "type": "string",
+                      "enum": [
+                        "NA",
+                        "Select"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "measure",
+                    "metric_description",
+                    "incentive_applicable",
+                    "penalty_applicable"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "require_pi_inclusion",
+          "key_analytes_critical_tat",
+          "key_analytes_details",
+          "metrics_in_scope"
+        ],
+        "additionalProperties": false
+      },
+      "country_allocation": {
+        "description": "Estimated number of sites, screened patients, and randomized patients per country, including anticipated FPV.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "country": {
+              "description": "Name of the country (e.g., 'US', 'Puerto Rico').",
+              "type": "string"
+            },
+            "planned_sites": {
+              "description": "Estimated number of planned sites for the country.",
+              "type": "number"
+            },
+            "planned_screened_patients": {
+              "description": "Estimated number of planned screened patients for the country.",
+              "type": "number"
+            },
+            "randomized_patients": {
+              "description": "Estimated number of randomized patients for the country.",
+              "type": "number"
+            },
+            "anticipated_fpv": {
+              "description": "Anticipated First Patient Visit (FPV) date for this country, if known. Format: YYYY-MM-DD.",
+              "anyOf": [
+                {
+                  "description": "Anticipated First Patient Visit (FPV) date for this country, if known. Format: YYYY-MM-DD.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "country",
+            "planned_sites",
+            "planned_screened_patients",
+            "randomized_patients",
+            "anticipated_fpv"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "visit_test_schedule": {
+        "description": "Details for the visit test schedule and schedule of activities, including analytes and IVDR compliance.",
+        "type": "object",
+        "properties": {
+          "number_of_patients_at_visits": {
+            "description": "Number of patients at each study visit.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "visit_name": {
+                  "description": "Name or identifier of the visit (e.g., 'Screening', 'Evaluation Period 1').",
+                  "type": "string"
+                },
+                "study_day": {
+                  "description": "Study day or range for the visit (e.g., 'through 1-7', '1', '29').",
+                  "anyOf": [
+                    {
+                      "description": "Study day or range for the visit (e.g., 'through 1-7', '1', '29').",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "visit_window": {
+                  "description": "Visit window in days (+/- number of days).",
+                  "anyOf": [
+                    {
+                      "description": "Visit window in days (+/- number of days).",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "num_patients": {
+                  "description": "Number of patients expected at this visit.",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "visit_name",
+                "study_day",
+                "visit_window",
+                "num_patients"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "testing_schedule": {
+            "description": "Schedule of required (X) or optional/reflex (O) testing per analyte per visit.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "analyte_name": {
+                  "description": "Name of the analyte or test category (e.g., 'Hematology', 'Clinical Chemistry').",
+                  "type": "string"
+                },
+                "visits": {
+                  "description": "List of visits and their testing status for this analyte.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "visit_name": {
+                        "description": "Name or identifier of the visit (e.g., 'Screening', 'Evaluation Period 1').",
+                        "type": "string"
+                      },
+                      "status": {
+                        "description": "Testing status for the visit: 'X' for required, 'O' for optional/reflex, ' ' for not applicable.",
+                        "type": "string",
+                        "enum": [
+                          "X",
+                          "O",
+                          " "
+                        ]
+                      }
+                    },
+                    "required": [
+                      "visit_name",
+                      "status"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "analyte_name",
+                "visits"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "analyte_ivdr_compliance_notes": {
+            "description": "Notes regarding IVDR compliance for analytes reported to EU sites, and central lab review requirements.",
+            "type": "string"
+          },
+          "non_reported_assay_results": {
+            "description": "List any assay results that will NOT be reported to the sites for patient management.",
+            "anyOf": [
+              {
+                "description": "List any assay results that will NOT be reported to the sites for patient management.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "analyte_listing_from_protocol": {
+            "description": "Insert analyte listing from draft/final protocol (Appendix 2: Clinical Laboratory Tests) here.",
+            "anyOf": [
+              {
+                "description": "Insert analyte listing from draft/final protocol (Appendix 2: Clinical Laboratory Tests) here.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "number_of_patients_at_visits",
+          "testing_schedule",
+          "analyte_ivdr_compliance_notes",
+          "non_reported_assay_results",
+          "analyte_listing_from_protocol"
+        ],
+        "additionalProperties": false
+      },
+      "reflex_optional_testing": {
+        "description": "Details on reflex and optional testing.",
+        "type": "object",
+        "properties": {
+          "pregnancy_test": {
+            "description": "Indicates if pregnancy test is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "ck_mb_relative_index": {
+            "description": "Indicates if CK-MB/relative index is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "uds_confirmation_required": {
+            "description": "Indicates if UDS confirmation is required per protocol.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "hbv_dna": {
+            "description": "Indicates if HBV DNA is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "hcv_rna": {
+            "description": "Indicates if HCV RNA is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "hiv_reflex": {
+            "description": "Indicates if HIV reflex is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "fsh": {
+            "description": "Indicates if FSH is a reflex/optional test.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "other_reflex_tests": {
+            "description": "List any other reflex tests and assumptions here, or indicate N/A.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pregnancy_test",
+          "ck_mb_relative_index",
+          "uds_confirmation_required",
+          "hbv_dna",
+          "hcv_rna",
+          "hiv_reflex",
+          "fsh",
+          "other_reflex_tests"
+        ],
+        "additionalProperties": false
+      },
+      "hypersensitivity_monitoring": {
+        "description": "Details for hypersensitivity monitoring, if applicable. Delete section if N/A.",
+        "anyOf": [
+          {
+            "description": "Details for hypersensitivity monitoring, if applicable. Delete section if N/A.",
+            "type": "object",
+            "properties": {
+              "visit_name": {
+                "description": "Visit name for hypersensitivity monitoring (e.g., 'Unscheduled').",
+                "type": "string"
+              },
+              "visit_requirements": {
+                "description": "Visit requirements for hypersensitivity monitoring (e.g., 'IRR Kit').",
+                "type": "string"
+              },
+              "occurrence": {
+                "description": "Occurrence details for hypersensitivity monitoring.",
+                "type": "string"
+              },
+              "protocol_visit_code": {
+                "description": "Protocol visit code (e.g., '998').",
+                "type": "string"
+              },
+              "num_patient_visits": {
+                "description": "Number of patient visits for hypersensitivity monitoring (e.g., '2% of sum of all patient visits, excluding baseline, RT/PSFU').",
+                "type": "string"
+              },
+              "analytes": {
+                "description": "List of analytes for hypersensitivity monitoring.",
+                "type": "array",
+                "items": {
+                  "description": "Name of the analyte (e.g., 'Immunogenicity', 'PK', 'Tryptase', 'C3, C3a, C5a', 'Cytokine Panel – must include IL-6, IL‐1β, IL‐10').",
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "visit_name",
+              "visit_requirements",
+              "occurrence",
+              "protocol_visit_code",
+              "num_patient_visits",
+              "analytes"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "hepatic_monitoring": {
+        "description": "Details for hepatic monitoring, if applicable. Delete section if N/A.",
+        "anyOf": [
+          {
+            "description": "Details for hepatic monitoring, if applicable. Delete section if N/A.",
+            "type": "object",
+            "properties": {
+              "visit_name": {
+                "description": "Visit name for hepatic monitoring (e.g., 'Hepatic Kit').",
+                "type": "string"
+              },
+              "visit_requirements": {
+                "description": "Visit requirements for hepatic monitoring (e.g., 'Unscheduled').",
+                "type": "string"
+              },
+              "occurrence": {
+                "description": "Occurrence details for hepatic monitoring.",
+                "type": "string"
+              },
+              "protocol_visit_code": {
+                "description": "Protocol visit code (e.g., '998').",
+                "type": "string"
+              },
+              "num_patient_visits": {
+                "description": "Number of patient visits for hepatic monitoring (e.g., '2% of sum of all patient visits, excluding baseline, RT/PSFU').",
+                "type": "string"
+              },
+              "optional_required_percentages": {
+                "description": "Optional/Required percentages for hepatic monitoring.",
+                "type": "array",
+                "items": {
+                  "description": "Percentage and status (e.g., '(O) 95%', '(R) 1%').",
+                  "type": "string"
+                }
+              },
+              "analytes": {
+                "description": "Categories and lists of analytes for hepatic monitoring.",
+                "type": "object",
+                "properties": {
+                  "hepatic_chemistry": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatic_hematology": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatic_coagulation": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatitis_a_virus": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatitis_b_virus": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatitis_c_virus": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "hepatitis_e_virus": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "urine_chemistry": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "immunoglobulins": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "other_hepatic_analytes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reflexes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "hepatic_chemistry",
+                  "hepatic_hematology",
+                  "hepatic_coagulation",
+                  "hepatitis_a_virus",
+                  "hepatitis_b_virus",
+                  "hepatitis_c_virus",
+                  "hepatitis_e_virus",
+                  "urine_chemistry",
+                  "immunoglobulins",
+                  "other_hepatic_analytes",
+                  "reflexes"
+                ],
+                "additionalProperties": false
+              },
+              "calculations_standard": {
+                "description": "Standard hepatic monitoring calculation criteria.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "Non-oncology Hepatic Algorithm Criteria for participants with baseline results <1.5X ULN",
+                    "Non-oncology Hepatic Algorithm Criteria for participants with baseline results ≥1.5X ULN",
+                    "Oncology Protocols WITHOUT Immune Checkpoint Inhibitors Hepatic Algorithm Criteria for participants with baseline results <1.5X ULN",
+                    "Oncology Protocols WITHOUT Immune Checkpoint Inhibitors Hepatic Algorithm Criteria for participants with baseline results ≥1.5X ULN",
+                    "Oncology Protocols WITH Immune Checkpoint Inhibitors Hepatic Algorithm Criteria for participants with baseline results <1.5X ULN",
+                    "Oncology Protocols WITH Immune Checkpoint Inhibitors Hepatic Algorithm Criteria for participants with baseline results ≥1.5X ULN"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "visit_name",
+              "visit_requirements",
+              "occurrence",
+              "protocol_visit_code",
+              "num_patient_visits",
+              "optional_required_percentages",
+              "analytes",
+              "calculations_standard"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "anatomic_pathology_histology": {
+        "description": "Details for anatomic pathology and histology samples, if applicable. Delete section if N/A.",
+        "anyOf": [
+          {
+            "description": "Details for anatomic pathology and histology samples, if applicable. Delete section if N/A.",
+            "type": "object",
+            "properties": {
+              "ap_samples_summary": {
+                "description": "Brief summary of AP samples to be collected and expectations for receipt and processing at the central lab.",
+                "type": "string"
+              },
+              "tissue_specifications": {
+                "type": "object",
+                "properties": {
+                  "submitted_samples_type": {
+                    "description": "Indicates if submitted samples will be archived, fresh, or a combo (specify percentage of each).",
+                    "type": "string"
+                  },
+                  "tumor_assessment_required": {
+                    "description": "Indicates if % tumor assessment is required on an H&E slide for block/slides submitted.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "sample_inspection_required": {
+                    "description": "Indicates if sample inspection is required on blocks/slides received from the site before storage.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "he_level_of_complexity": {
+                    "description": "H&E level of complexity (Low, Mid, High).",
+                    "type": "string",
+                    "enum": [
+                      "Low",
+                      "Mid",
+                      "High",
+                      "Select"
+                    ]
+                  }
+                },
+                "required": [
+                  "submitted_samples_type",
+                  "tumor_assessment_required",
+                  "sample_inspection_required",
+                  "he_level_of_complexity"
+                ],
+                "additionalProperties": false
+              },
+              "sectioning_of_blocks": {
+                "type": "object",
+                "properties": {
+                  "re_embedding_acceptable": {
+                    "description": "Indicates if re-embedding is acceptable if block is damaged, not in standard cassette, or will not render good sections.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "multiple_blocks_action": {
+                    "description": "Action taken if multiple blocks are received on a single accession.",
+                    "type": "string"
+                  },
+                  "he_required_on_each_block": {
+                    "description": "Indicates if H&E is required on each block if multiple blocks are received.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "slides_cut_upon": {
+                    "description": "Indicates if slides should be cut upon receipt or upon request.",
+                    "type": "string",
+                    "enum": [
+                      "Receipt",
+                      "Request",
+                      "Select"
+                    ]
+                  },
+                  "tissue_curls_required": {
+                    "description": "Indicates if tissue curls are required.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "num_slides_cut": {
+                    "description": "Number of slides to be cut.",
+                    "type": "string"
+                  },
+                  "positively_charged_slides_required": {
+                    "description": "Indicates if positively charged slides are required for sectioning.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "block_return_to_site_timing": {
+                    "description": "When the block should be returned to site after sectioning.",
+                    "type": "string"
+                  },
+                  "slides_baked_after_sectioning": {
+                    "description": "Indicates if slides should be baked after sectioning.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  }
+                },
+                "required": [
+                  "re_embedding_acceptable",
+                  "multiple_blocks_action",
+                  "he_required_on_each_block",
+                  "slides_cut_upon",
+                  "tissue_curls_required",
+                  "num_slides_cut",
+                  "positively_charged_slides_required",
+                  "block_return_to_site_timing",
+                  "slides_baked_after_sectioning"
+                ],
+                "additionalProperties": false
+              },
+              "slides": {
+                "type": "object",
+                "properties": {
+                  "num_slides_requested_from_sites": {
+                    "description": "Number of slides requested from sites.",
+                    "type": "string"
+                  },
+                  "slides_stored_or_shipped": {
+                    "description": "Indicates if slides are stored or shipped to a referral lab.",
+                    "type": "string"
+                  },
+                  "num_stored_shipped_per_patient": {
+                    "description": "Number of slides per patient to be stored and shipped, if both.",
+                    "type": "string"
+                  },
+                  "slide_storage_temp_condition": {
+                    "description": "Slide storage temperature/condition.",
+                    "type": "string"
+                  },
+                  "shipping_frequency": {
+                    "description": "Frequency of shipping if slides are shipped.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "num_slides_requested_from_sites",
+                  "slides_stored_or_shipped",
+                  "num_stored_shipped_per_patient",
+                  "slide_storage_temp_condition",
+                  "shipping_frequency"
+                ],
+                "additionalProperties": false
+              },
+              "fresh_tissue": {
+                "type": "object",
+                "properties": {
+                  "fresh_frozen_tissue_received": {
+                    "description": "Indicates if fresh frozen tissue samples will be received.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "oct_compound_required": {
+                    "description": "If fresh frozen tissue samples received, indicates if optimum cutting temperature (OCT) compound will be required.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "expected_fixative": {
+                    "description": "Expected fixative for fresh tissue.",
+                    "type": "string"
+                  },
+                  "decalcification_of_bone_required": {
+                    "description": "Indicates if decalcification of bone is required.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "block_stored_or_sectioned_after_embedding": {
+                    "description": "Indicates if block is to be stored or sectioned after embedding.",
+                    "type": "string"
+                  },
+                  "local_path_report_sent_with_samples": {
+                    "description": "Indicates if local pathology report is sent with samples.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  },
+                  "central_lab_redaction_required": {
+                    "description": "If local path report sent, indicates if central lab redaction of personal information is required.",
+                    "type": "string",
+                    "enum": [
+                      "Yes",
+                      "No",
+                      "Select"
+                    ]
+                  }
+                },
+                "required": [
+                  "fresh_frozen_tissue_received",
+                  "oct_compound_required",
+                  "expected_fixative",
+                  "decalcification_of_bone_required",
+                  "block_stored_or_sectioned_after_embedding",
+                  "local_path_report_sent_with_samples",
+                  "central_lab_redaction_required"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "ap_samples_summary",
+              "tissue_specifications",
+              "sectioning_of_blocks",
+              "slides",
+              "fresh_tissue"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "specimen_management_referral_lab_samples": {
+        "description": "Details for samples sent by the central lab to a referral lab for testing.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "analyte_name": {
+              "description": "Name of the analyte (e.g., 'LTS PK', 'Immunogenicity', 'Limited use bmkr').",
+              "type": "string"
+            },
+            "validated_assay": {
+              "description": "Indicates if a validated assay is used.",
+              "type": "string"
+            },
+            "lilly_proprietary_assay": {
+              "description": "Indicates if it's a Lilly proprietary assay.",
+              "type": "string"
+            },
+            "ref_lab_contract_owner": {
+              "description": "Owner of the referral lab contract.",
+              "type": "string"
+            },
+            "assay_lab": {
+              "description": "Name of the assay lab.",
+              "type": "string"
+            },
+            "assay_lab_city_state_country": {
+              "description": "City, state, and country of the assay lab.",
+              "type": "string"
+            },
+            "special_collection_tube_required": {
+              "description": "Indicates if a special collection tube is required.",
+              "type": "string",
+              "enum": [
+                "Yes",
+                "No",
+                "Select"
+              ]
+            },
+            "special_collection_tube": {
+              "description": "Description of the special collection tube, or N/A.",
+              "anyOf": [
+                {
+                  "description": "Description of the special collection tube, or N/A.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sample_type": {
+              "description": "Type of sample (e.g., 'Serum').",
+              "type": "string"
+            },
+            "special_processing_requirements": {
+              "description": "Any special processing requirements for the sample.",
+              "anyOf": [
+                {
+                  "description": "Any special processing requirements for the sample.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sample_volume_per_collection": {
+              "description": "Sample volume per collection (e.g., 'x mL', '2x 5mL').",
+              "type": "string"
+            },
+            "num_aliquots_per_expected_sample": {
+              "description": "Number of aliquots per expected sample (e.g., '1 (default)', '2 per sample (4 total) -default').",
+              "type": "string"
+            },
+            "total_num_expected_samples_for_trial": {
+              "description": "Total number of expected samples for the trial.",
+              "type": "number"
+            },
+            "num_results_per_expected_sample": {
+              "description": "Number of results per expected sample.",
+              "type": "number"
+            },
+            "post_lpv_storage": {
+              "description": "Post-LPV storage duration (e.g., '# yr' or 'NA').",
+              "type": "string"
+            },
+            "num_post_lpv_storage_aliquots": {
+              "description": "Number of post-LPV storage aliquots (e.g., '#', '3 (default); 1 shipped').",
+              "type": "string"
+            },
+            "ship_site_to_central_lab": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from site to central lab.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from site to central lab.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            },
+            "ship_central_lab_to_referral_lab_for_testing": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from central lab to referral lab for testing.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from central lab to referral lab for testing.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            },
+            "ship_central_lab_to_central_lab_biorepository_for_storage": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from central lab to central lab biorepository for storage.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from central lab to central lab biorepository for storage.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            },
+            "referral_lab_data_reporting_format": {
+              "description": "Format for referral lab data reporting.",
+              "type": "string"
+            },
+            "data_transmission_to": {
+              "description": "Recipient of data transmission (e.g., 'Lilly', 'CRO').",
+              "type": "string"
+            }
+          },
+          "required": [
+            "analyte_name",
+            "validated_assay",
+            "lilly_proprietary_assay",
+            "ref_lab_contract_owner",
+            "assay_lab",
+            "assay_lab_city_state_country",
+            "special_collection_tube_required",
+            "special_collection_tube",
+            "sample_type",
+            "special_processing_requirements",
+            "sample_volume_per_collection",
+            "num_aliquots_per_expected_sample",
+            "total_num_expected_samples_for_trial",
+            "num_results_per_expected_sample",
+            "post_lpv_storage",
+            "num_post_lpv_storage_aliquots",
+            "ship_site_to_central_lab",
+            "ship_central_lab_to_referral_lab_for_testing",
+            "ship_central_lab_to_central_lab_biorepository_for_storage",
+            "referral_lab_data_reporting_format",
+            "data_transmission_to"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "specimen_management_storage_samples": {
+        "description": "Details for samples that are stored for future research or analytes for which testing lab/assay is not identified/validated.",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "analyte_name": {
+              "description": "Name of the analyte (e.g., 'LTS DNA', 'LTS Serum', 'LTS Plasma', 'LTS Urine', 'LTS CSF', 'LTS RNA', 'LTS Tissue, etc.').",
+              "type": "string"
+            },
+            "validated_assay": {
+              "description": "Indicates if a validated assay is used (often 'NA' for storage samples).",
+              "type": "string"
+            },
+            "lilly_proprietary_assay": {
+              "description": "Indicates if it's a Lilly proprietary assay (often 'NA' for storage samples).",
+              "type": "string"
+            },
+            "ref_lab_contract_owner": {
+              "description": "Owner of the referral lab contract (e.g., 'Lilly, central lab', 'NA').",
+              "type": "string"
+            },
+            "assay_lab": {
+              "description": "Name of the assay lab (often 'NA' for storage samples).",
+              "anyOf": [
+                {
+                  "description": "Name of the assay lab (often 'NA' for storage samples).",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "assay_lab_city_state_country": {
+              "description": "City, state, and country of the assay lab (often 'NA' for storage samples).",
+              "anyOf": [
+                {
+                  "description": "City, state, and country of the assay lab (often 'NA' for storage samples).",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "special_collection_tube_required": {
+              "description": "Indicates if a special collection tube is required.",
+              "type": "string",
+              "enum": [
+                "Yes",
+                "No",
+                "Select"
+              ]
+            },
+            "special_collection_tube": {
+              "description": "Description of the special collection tube, or N/A. Include catalog # if known.",
+              "anyOf": [
+                {
+                  "description": "Description of the special collection tube, or N/A. Include catalog # if known.",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "special_processing_requirements": {
+              "description": "Any special processing requirements for the sample (e.g., 'For LTSRNAEX, extract and aliquot each PAXgene tube separately.').",
+              "anyOf": [
+                {
+                  "description": "Any special processing requirements for the sample (e.g., 'For LTSRNAEX, extract and aliquot each PAXgene tube separately.').",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sample_type": {
+              "description": "Type of sample (e.g., 'Serum', 'PAXgene (default)').",
+              "type": "string"
+            },
+            "sample_volume_per_collection": {
+              "description": "Sample volume per collection (e.g., 'x mL', '# FTA cards', '3 x 2.5 mL (default)').",
+              "type": "string"
+            },
+            "num_aliquots_per_expected_sample": {
+              "description": "Number of aliquots per expected sample (e.g., '1 (default)', '3 (default)', '#').",
+              "type": "string"
+            },
+            "total_num_expected_samples_for_trial": {
+              "description": "Total number of expected samples for the trial.",
+              "type": "number"
+            },
+            "num_results_per_expected_sample": {
+              "description": "Number of results per expected sample (often 'NA' for storage samples).",
+              "type": "string"
+            },
+            "post_lpv_storage": {
+              "description": "Post-LPV storage duration (e.g., '# yr' or 'NA').",
+              "type": "string"
+            },
+            "num_post_lpv_storage_aliquots": {
+              "description": "Number of post-LPV storage aliquots.",
+              "type": "number"
+            },
+            "ship_site_to_central_lab": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from site to central lab.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from site to central lab.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            },
+            "ship_central_lab_to_referral_lab_for_testing": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from central lab to referral lab for testing.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from central lab to referral lab for testing.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            },
+            "ship_central_lab_to_central_lab_biorepository_for_storage": {
+              "type": "object",
+              "properties": {
+                "condition": {
+                  "description": "Shipping condition from central lab to central lab biorepository for storage.",
+                  "type": "string"
+                },
+                "frequency": {
+                  "description": "Shipping frequency from central lab to central lab biorepository for storage.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "condition",
+                "frequency"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "analyte_name",
+            "validated_assay",
+            "lilly_proprietary_assay",
+            "ref_lab_contract_owner",
+            "assay_lab",
+            "assay_lab_city_state_country",
+            "special_collection_tube_required",
+            "special_collection_tube",
+            "special_processing_requirements",
+            "sample_type",
+            "sample_volume_per_collection",
+            "num_aliquots_per_expected_sample",
+            "total_num_expected_samples_for_trial",
+            "num_results_per_expected_sample",
+            "post_lpv_storage",
+            "num_post_lpv_storage_aliquots",
+            "ship_site_to_central_lab",
+            "ship_central_lab_to_referral_lab_for_testing",
+            "ship_central_lab_to_central_lab_biorepository_for_storage"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "result_management": {
+        "description": "Information regarding result management for local lab or direct ship results.",
+        "type": "object",
+        "properties": {
+          "is_result_management_needed": {
+            "description": "Indicates if Result Management is needed for this protocol.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "result_management_details": {
+            "description": "Specify local lab, analytes, units, and reference ranges if result management is needed. Indicate N/A if not known or not applicable.",
+            "anyOf": [
+              {
+                "description": "Specify local lab, analytes, units, and reference ranges if result management is needed. Indicate N/A if not known or not applicable.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "is_result_management_needed",
+          "result_management_details"
+        ],
+        "additionalProperties": false
+      },
+      "bulk_supplies": {
+        "description": "List any bulk supplies required for this protocol, or indicate N/A.",
+        "type": "string"
+      },
+      "kits": {
+        "description": "Details regarding kit management.",
+        "type": "object",
+        "properties": {
+          "kit_overage_percentage": {
+            "description": "Kit overage as a percentage of total kits.",
+            "type": "string"
+          },
+          "expedited_production_orders_percentage": {
+            "description": "Expedited production orders as a percentage of outbound shipments.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kit_overage_percentage",
+          "expedited_production_orders_percentage"
+        ],
+        "additionalProperties": false
+      },
+      "couriers": {
+        "description": "Details regarding courier services and requirements.",
+        "type": "object",
+        "properties": {
+          "inbound_shipment_weekend_pickup_percentage": {
+            "description": "Percentage of in-bound shipment total for weekend pick-up.",
+            "type": "string"
+          },
+          "dry_ice": {
+            "description": "Dry ice requirements or considerations.",
+            "type": "string"
+          },
+          "transportation_assumptions": {
+            "description": "Transportation assumptions (primary, secondary, tertiary cities).",
+            "type": "string"
+          },
+          "special_courier_requirements": {
+            "description": "Indicates if special courier requirements exist (e.g., Extreme Ambient Shippers for Latin America).",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "special_courier_requirements_list": {
+            "description": "List special courier requirements, otherwise N/A.",
+            "anyOf": [
+              {
+                "description": "List special courier requirements, otherwise N/A.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "inbound_shipment_weekend_pickup_percentage",
+          "dry_ice",
+          "transportation_assumptions",
+          "special_courier_requirements",
+          "special_courier_requirements_list"
+        ],
+        "additionalProperties": false
+      },
+      "data_management_services": {
+        "description": "Details regarding data management services.",
+        "type": "object",
+        "properties": {
+          "database_modifications": {
+            "description": "Database modifications required.",
+            "type": "string"
+          },
+          "sample_metadata": {
+            "description": "Sample metadata requirements.",
+            "type": "string"
+          },
+          "header_reconciliation": {
+            "description": "Header reconciliation requirements.",
+            "type": "string"
+          },
+          "sample_administration_file_needed": {
+            "description": "Indicates if a Sample Administration File is needed.",
+            "type": "string"
+          },
+          "tissue_administration_file_needed": {
+            "description": "Indicates if a Tissue Administration File is needed.",
+            "type": "string"
+          },
+          "data_transfer_to_labsconnect": {
+            "description": "Data transfer to LabsConnect requirements.",
+            "type": "string"
+          },
+          "number_of_planned_interim_or_final_datalocks_snapshots": {
+            "description": "Number of planned interim or final datalocks/snapshots.",
+            "type": "string"
+          },
+          "data_transfer_to_tpo_cro": {
+            "description": "Data transfer to TPO / CRO requirements.",
+            "type": "string"
+          },
+          "data_transfer_to_tpo_cro_frequency": {
+            "description": "Frequency of data transfer to TPO / CRO.",
+            "anyOf": [
+              {
+                "description": "Frequency of data transfer to TPO / CRO.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tpo_cro_name": {
+            "description": "Name of the TPO / CRO.",
+            "anyOf": [
+              {
+                "description": "Name of the TPO / CRO.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "database_modifications",
+          "sample_metadata",
+          "header_reconciliation",
+          "sample_administration_file_needed",
+          "tissue_administration_file_needed",
+          "data_transfer_to_labsconnect",
+          "number_of_planned_interim_or_final_datalocks_snapshots",
+          "data_transfer_to_tpo_cro",
+          "data_transfer_to_tpo_cro_frequency",
+          "tpo_cro_name"
+        ],
+        "additionalProperties": false
+      },
+      "customized_services": {
+        "description": "Description of any customized services required.",
+        "type": "object",
+        "properties": {
+          "special_enhanced_monitoring_required": {
+            "description": "List any special/enhanced monitoring required in detail (e.g., monitoring of blinded results, shipment of samples in complete patient sets).",
+            "type": "string"
+          },
+          "special_metrics_dashboards_required": {
+            "description": "Indicates if special metrics or dashboards will be required for this trial.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "placebo_samples_shipped_to_ref_lab": {
+            "description": "Indicates if placebo samples will be shipped to the referral lab.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "special_kit_design_requirements": {
+            "description": "Indicates if there are any special kit design requirements (e.g., baggies for timed draws, colored stickers, skinny kits).",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No",
+              "Select"
+            ]
+          },
+          "assays_require_expedited_testing_tat": {
+            "description": "Indicates if any assays require expedited testing TAT.",
+            "type": "string",
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "expedited_testing_tat_details": {
+            "description": "If expedited testing TAT is required, list analyte(s) and desired TAT, otherwise N/A.",
+            "anyOf": [
+              {
+                "description": "If expedited testing TAT is required, list analyte(s) and desired TAT, otherwise N/A.",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "special_enhanced_monitoring_required",
+          "special_metrics_dashboards_required",
+          "placebo_samples_shipped_to_ref_lab",
+          "special_kit_design_requirements",
+          "assays_require_expedited_testing_tat",
+          "expedited_testing_tat_details"
+        ],
+        "additionalProperties": false
+      },
+      "translations": {
+        "description": "List of languages for which translations are required.",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "English",
+            "French",
+            "German",
+            "Italian",
+            "Japanese",
+            "Portuguese (Brazil)",
+            "Chinese",
+            "Spanish (EU)",
+            "Spanish (Latin America)",
+            "Afrikaans",
+            "Arabic",
+            "Belarusian",
+            "Bulgarian",
+            "Croatian",
+            "Czech",
+            "Danish",
+            "Dutch",
+            "Estonian",
+            "Finnish",
+            "Georgian",
+            "Greek",
+            "Hebrew",
+            "Hindi",
+            "Hungarian",
+            "Indonesian",
+            "Korean",
+            "Latvian",
+            "Lithuanian",
+            "Malay",
+            "Norwegian",
+            "Polish",
+            "Portuguese (EU)",
+            "Romanian",
+            "Russian",
+            "Serbian",
+            "Swiss German",
+            "Slovakian",
+            "Slovenia",
+            "Swedish",
+            "Thai",
+            "Taiwanese",
+            "Turkish",
+            "Ukrainian",
+            "Other"
+          ]
+        }
+      },
+      "miscellaneous_service_requests": {
+        "description": "Description of any other miscellaneous service requests.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "general_information",
+      "protocol_information",
+      "trial_milestones",
+      "investigator_training",
+      "pediatric_considerations",
+      "oncology_considerations",
+      "decentralized_trials",
+      "penalties_and_incentives",
+      "country_allocation",
+      "visit_test_schedule",
+      "reflex_optional_testing",
+      "hypersensitivity_monitoring",
+      "hepatic_monitoring",
+      "anatomic_pathology_histology",
+      "specimen_management_referral_lab_samples",
+      "specimen_management_storage_samples",
+      "result_management",
+      "bulk_supplies",
+      "kits",
+      "couriers",
+      "data_management_services",
+      "customized_services",
+      "translations",
+      "miscellaneous_service_requests"
+    ],
+    "additionalProperties": false
+  },
+  "configuration": {
+    "tier": "cost_effective",
+    "extraction_target": "per_doc",
+    "parse_tier": "agentic",
+    "parse_config_id": null,
+    "cite_sources": false,
+    "confidence_scores": false
+  }
+}
