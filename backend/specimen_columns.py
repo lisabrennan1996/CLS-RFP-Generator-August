@@ -15,10 +15,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-# This file lives at webapp/backend/engine/specimen_columns.py; template.docx lives at
+# This file lives at webapp/backend/specimen_columns.py; template.docx lives at
 # webapp/template.docx (a sibling of backend/, so the whole app is self-contained in one
-# folder) -- parents[2] from here is webapp/.
-_DEFAULT_TEMPLATE_PATH = Path(__file__).resolve().parents[2] / 'template.docx'
+# folder) -- parents[1] from here is webapp/.
+_DEFAULT_TEMPLATE_PATH = Path(__file__).resolve().parents[1] / 'template.docx'
 
 
 def _clean_header(text: str) -> str:

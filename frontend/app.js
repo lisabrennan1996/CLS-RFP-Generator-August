@@ -142,7 +142,11 @@
     args = args || {};
     switch (cmd) {
       case 'pick_document': {
-        const file = await pickFileViaInput('.pdf,.docx,.doc');
+        // .docx (not .doc -- python-docx can't read the legacy binary format) is kept here
+        // for "Previous RFP" attachment, which reads a .docx directly and never needs
+        // conversion; the main protocol upload and "Design Elements" attach only accept a
+        // PDF in practice (Word conversion isn't supported -- see documents.py).
+        const file = await pickFileViaInput('.pdf,.docx');
         const uploaded = await uploadFileToServer(file);
         return { path: uploaded.file_id, name: uploaded.name };
       }

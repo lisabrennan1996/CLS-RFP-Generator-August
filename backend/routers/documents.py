@@ -18,11 +18,15 @@ from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 from ..schemas import CamelModel
 from ..sessions import new_file_id, session_dir
 from ..services import pdf as pdf_service
-from ..services.office_convert import OfficeConversionError, convert_to_pdf
 
 router = APIRouter(prefix="/api", tags=["documents"])
 
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc"}
+# LibreOffice-based Word->PDF conversion was removed (not supported on this deployment's
+# servers) -- PDFs upload and work as before. ".docx" is still accepted (not ".doc", which
+# python-docx can't read at all) purely for "Previous RFP" attachment, which reads a .docx
+# directly via python-docx/build_specimen.py and never goes through /api/convert-to-pdf at
+# all -- see that endpoint's own docstring for the one path that still needs a real PDF.
+SUPPORTED_EXTENSIONS = {".pdf", ".docx"}
 
 
 def _strip_surrounding_quotes(name: str) -> str:
@@ -83,20 +87,23 @@ class ConvertRequest(CamelModel):
 
 @router.post("/convert-to-pdf")
 async def convert_to_pdf_endpoint(body: ConvertRequest, x_session_id: str = Header(...)):
+    """Word (.docx) -> PDF conversion via LibreOffice was removed -- not supported on this
+    deployment's servers. This endpoint is still called by the frontend's `ensure_pdf_path`
+    (the main protocol upload and the "Design Elements" attach both call it unconditionally,
+    since it's a safe no-op passthrough for an already-PDF file) -- so a PDF input still
+    passes straight through unchanged; a non-PDF input now fails with a clear, actionable
+    error instead of shelling out to a LibreOffice binary that may not exist on this server.
+    ("Previous RFP" attachment reads a .docx directly via python-docx/build_specimen.py and
+    never calls this endpoint at all, so it's unaffected.)"""
     src = _find_session_file(x_session_id, body.path)
     if src.suffix.lower() == ".pdf":
         return {"file_id": body.path}
 
-    out_dir = session_dir(x_session_id)
-    try:
-        converted_path = convert_to_pdf(str(src), str(out_dir))
-    except OfficeConversionError as exc:
-        raise HTTPException(500, str(exc)) from exc
-
-    new_id = new_file_id()
-    final_path = out_dir / f"{new_id}.pdf"
-    Path(converted_path).replace(final_path)
-    return {"file_id": new_id}
+    raise HTTPException(
+        400,
+        "Word document upload isn't supported here -- please upload a PDF instead "
+        f"(got {src.suffix.lower() or '(no extension)'}).",
+    )
 
 
 class RasterizeRequest(CamelModel):

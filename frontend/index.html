@@ -148,7 +148,8 @@
                 <p class="nav-note specimen-source-or">&mdash; or &mdash;</p>
                 <div class="specimen-source-option">
                   <button class="btn btn-block" id="attachClipsNonPkpdBtn" type="button" title="Optional — fills Referral/Storage Samples directly from these worksheets, instead of a Previous RFP">+ Add CLIPS/Non-PKPD worksheet(s)</button>
-                  <input type="file" id="clipsNonPkpdFileInput" multiple hidden accept=".pdf,.docx,.doc" />
+                  <!-- pdfplumber-based extraction (clips_nonpkpd_parser.py) only ever reads PDFs. -->
+                  <input type="file" id="clipsNonPkpdFileInput" multiple hidden accept=".pdf" />
                   <div class="clips-nonpkpd-list" id="clipsNonPkpdList" hidden></div>
                 </div>
                 <p class="nav-note specimen-source-hint" id="specimenSourceHint" hidden></p>

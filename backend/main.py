@@ -11,6 +11,7 @@ replace CLS Studio's Tauri commands. Run locally from the `rfp-webapp/` director
 from __future__ import annotations
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -21,6 +22,13 @@ from .routers import documents, export, rfp, tables
 from .sessions import sweep_old_sessions
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
+
+# CATS routes traffic through an ingress with a path prefix (e.g. "/cls-rfp-generator") --
+# FastAPI needs to know that prefix (via `root_path`) so it generates correct URLs for
+# OpenAPI/docs and any redirect responses, even though the app itself is still mounted at
+# "/" underneath it. Left empty for local `uvicorn --reload` runs (no ingress in front);
+# set the ROOT_PATH env var to the actual ingress prefix in the Kubernetes deployment.
+ROOT_PATH = os.environ.get("ROOT_PATH", "")
 
 
 async def _sweep_loop() -> None:
@@ -37,7 +45,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="RFP Webapp", lifespan=lifespan)
+app = FastAPI(title="RFP Webapp", lifespan=lifespan, root_path=ROOT_PATH)
 
 app.include_router(documents.router)
 app.include_router(tables.router)
