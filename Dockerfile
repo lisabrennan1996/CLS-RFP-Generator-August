@@ -17,8 +17,18 @@ COPY backend/ /app/backend/
 COPY frontend/ /app/frontend/
 COPY template.docx /app/template.docx
 
-# Install backend dependencies
+# Install backend dependencies (includes python-multipart, needed for the
+# POST /api/admin/fabric-extract-upload endpoint's file-upload handling)
 RUN pip install -r /app/backend/requirements.txt
+
+# Matches deploy.yaml's FABRIC_EXTRACT_PATH -- the deployed server has no OneDrive
+# client, so a desktop scheduled task pushes the Fabric extract file here instead
+# (see backend/routers/admin.py); mounted onto a PersistentVolumeClaim in
+# deploy.yaml so it survives pod restarts. Overridable at runtime via the env var
+# of the same name -- this is just the default for local/non-K8s runs.
+ENV FABRIC_EXTRACT_PATH=/data/fabric-extract/fabric_study_extract.xlsx
+RUN mkdir -p /data/fabric-extract
+VOLUME /data/fabric-extract
 
 # Run uvicorn pointing at your main FastAPI app
 # Port 7007 matches deploy.yaml's containerPort/service port -- keep these in sync.
