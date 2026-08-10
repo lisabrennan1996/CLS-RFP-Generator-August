@@ -27,8 +27,13 @@ from collections import defaultdict
 import fabric_auth
 import openpyxl
 
-DEFAULT_OUTPUT_PATH = (
-    r"C:\Users\L047081\OneDrive - Eli Lilly and Company\CLS Studio\fabric_study_extract.xlsx"
+# Overridable via FABRIC_EXTRACT_PATH so the deployed webapp (no OneDrive client in the
+# container) can point this at its own persistent-volume path instead -- see
+# routers/admin.py's upload endpoint, which the desktop daily extract task pushes this
+# same file to after writing its local OneDrive copy.
+DEFAULT_OUTPUT_PATH = os.environ.get(
+    "FABRIC_EXTRACT_PATH",
+    r"C:\Users\L047081\OneDrive - Eli Lilly and Company\CLS AI Backend - Documents\RFP extract\fabric_study_extract.xlsx",
 )
 
 COLUMNS = [

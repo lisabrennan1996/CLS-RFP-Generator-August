@@ -18,7 +18,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import documents, export, rfp, tables
+from .routers import admin, documents, export, rfp, tables
 from .sessions import sweep_old_sessions
 
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -47,6 +47,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="RFP Webapp", lifespan=lifespan, root_path=ROOT_PATH)
 
+app.include_router(admin.router)
 app.include_router(documents.router)
 app.include_router(tables.router)
 app.include_router(rfp.router)
