@@ -1,116 +1,146 @@
 #!/usr/bin/env python3
-"""Reconstruct the two Specimen-Management sections (Referral Lab Samples and
-Storage Samples / LTS) directly from a previous, completed Central Lab RFP
-.docx — which is built from the same template, so its data tables are real
-Word tables (not OCR/positional reconstruction). Returns
-{row_label: {column: value}} for each section, matching the shape
-`populate_rfp.py::fill_spec()` already consumes.
+"""Reconstruct the Specimen Management sections (Referral Lab Samples and
+both Storage Samples / LTS tables) directly from a previous, completed
+Central Lab RFP .docx -- which is built from the same template, so its data
+tables are real Word tables (not OCR/positional reconstruction).
+
+Generalized to specimen_columns.py's full 12-column registry (previously
+this hardcoded a 6-column subset with no Immunogenicity/Urine/CSF/Tissue/
+bmkr support at all) so the "Previous RFP" preview/selection UI can show --
+and let the user choose from -- every real column, not just a fixed subset.
+
+`build()`'s return shape is a preview/selection payload, not the
+{row_label: {column: value}} shape `fill_spec()` consumes directly --
+populate_rfp.py's own orchestration derives that from `rows` for whichever
+columns the user actually selected.
 """
 from __future__ import annotations
 
+import re
+
 import docx
 
+from docx_table_ops import row_cells
 
-def _distinct(row):
-    """De-duplicate cells that share the same underlying <w:tc> (merged cells)."""
-    out, seen = [], set()
-    for c in row.cells:
-        if id(c._tc) not in seen:
-            seen.add(id(c._tc))
-            out.append(c)
-    return out
-
-
-def _find_data_table(doc, keyword: str, min_rows: int = 5):
-    """Same header-keyword + row-count heuristic populate_rfp.py uses to
-    locate template tables — the previous RFP shares the same template."""
-    candidates = []
-    for i, t in enumerate(doc.tables):
-        try:
-            header = t.rows[0].cells[0].text
-        except (IndexError, AttributeError):
-            continue
-        if keyword.lower() in header.lower() and len(t.rows) >= min_rows:
-            candidates.append((i, len(t.rows), len(t.columns)))
-    if not candidates:
-        return None
-    return doc.tables[max(candidates, key=lambda x: (x[1], x[2]))[0]]
+# Boilerplate/placeholder text the template's own unfilled cells show (confirmed
+# directly against the template: "NA"-default dropdowns, "Select" dropdowns never
+# answered, and free-text placeholders like "List Assay Lab") -- treated as "no
+# real data" so a column nobody actually filled in doesn't look populated in the
+# preview/selection UI just because its cell isn't literally blank.
+_PLACEHOLDER_EXACT = {'na', 'select', '#', '# yr or na', 'x ml or # fta cards'}
+_PLACEHOLDER_DEFAULT_RE = re.compile(r'^\d+\s*\(default\)$', re.I)
 
 
-def _read_table(table, columns: list[str]) -> dict[str, dict[str, str]]:
-    """Read a data table into {row_label: {column: value}}.
+def _is_placeholder(value: str) -> bool:
+    v = value.strip().lower()
+    if not v:
+        return True
+    if v in _PLACEHOLDER_EXACT:
+        return True
+    if v.startswith('list '):
+        return True
+    if v.startswith('x ml'):
+        return True
+    return bool(_PLACEHOLDER_DEFAULT_RE.match(v))
 
-    `columns` is the list of target column names to extract (substring
-    matched against the table's own header row, case-insensitive) — mirrors
-    how `fill_spec()` locates columns when writing.
-    """
-    header_cells = _distinct(table.rows[0])
-    col_idx = {}
-    for col_name in columns:
-        for i, c in enumerate(header_cells):
-            if col_name.lower() in c.text.lower():
-                col_idx[col_name] = i
+
+def _match_columns_for_table(header_cells, registry_cols_for_role: list[dict]) -> list[dict]:
+    """Matches each registry column entry (from the pristine template) to a real
+    column index in THIS previous RFP's own header row, by `base_label` text
+    (case-insensitive substring) -- robust to a previous RFP whose columns may
+    have shifted position (e.g. from an earlier duplicate-assignment run that
+    inserted a real "LTS Serum (2)" column). Duplicate-labeled registry entries
+    (the three "Limited use bmkr" slots, which all share the same base_label)
+    are consumed against the previous RFP's own duplicate header cells in
+    left-to-right order, so each still maps to a distinct real column despite
+    the identical label text -- same convention specimen_columns.list_columns()
+    already uses when building the registry itself.
+
+    Returns registry column dicts with `col_index` replaced by this table's
+    own real position (columns with no match at all are omitted)."""
+    used: set[int] = set()
+    matched = []
+    for reg_col in registry_cols_for_role:
+        label = reg_col['base_label'].lower()
+        for i, cell in enumerate(header_cells):
+            if i == 0 or i in used:
+                continue
+            if label in cell.text.lower():
+                used.add(i)
+                matched.append({**reg_col, 'col_index': i})
                 break
-
-    out: dict[str, dict[str, str]] = {}
-    for row in table.rows[1:]:
-        cells = _distinct(row)
-        if not cells:
-            continue
-        label = cells[0].text.strip()
-        if not label:
-            continue
-        values = {}
-        for col_name, idx in col_idx.items():
-            if idx < len(cells):
-                val = cells[idx].text.strip()
-                if val:
-                    values[col_name] = val
-        if values:
-            out[label] = values
-    return out
+    return matched
 
 
-def build(previous_rfp_path: str = '') -> tuple[dict, dict]:
-    """Return (referral, storage) dicts, or ({}, {}) if no previous RFP is
-    given or its tables can't be located."""
+def build(previous_rfp_path: str) -> dict:
+    """Returns, for each specimen table role it can locate in the previous RFP:
+
+        {table_role: {"table_idx": int, "columns": [{"key", "table_role",
+         "col_index", "base_label", "display_label", "tag", "has_data": bool},
+         ...], "rows": {row_label: {col_key: value}}}}
+
+    `has_data` is true when at least one row has a non-empty value for that
+    column in THIS previous RFP -- lets the caller default the selection UI's
+    checkboxes to what's actually there, without the user having to guess.
+    A role is omitted entirely if its table couldn't be located at all.
+    Returns `{}` if no path is given or the file can't be opened."""
     if not previous_rfp_path:
-        return {}, {}
+        return {}
     try:
         doc = docx.Document(previous_rfp_path)
     except Exception:
-        return {}, {}
+        return {}
 
-    referral_table = _find_data_table(doc, 'REFERRAL LAB')
-    referral = _read_table(referral_table, ['LTS PK']) if referral_table is not None else {}
+    from populate_rfp import locate_specimen_tables
+    from specimen_columns import list_columns
 
-    storage_wide = _find_data_table(doc, 'STORAGE SAMPLES', min_rows=10)
-    storage = _read_table(storage_wide, ['LTS DNA', 'LTS Serum', 'LTS Plasma']) if storage_wide is not None else {}
+    roles = locate_specimen_tables(doc)
+    registry_by_role: dict[str, list[dict]] = {}
+    for col in list_columns():
+        registry_by_role.setdefault(col['table_role'], []).append(col)
 
-    # The RNA column lives in a second, narrower "STORAGE SAMPLES" table.
-    storage_candidates = [
-        t for t in doc.tables
-        if t is not storage_wide
-        and t.rows and 'storage samples' in t.rows[0].cells[0].text.lower()
-        and len(t.rows) >= 10
-    ]
-    if storage_candidates:
-        rna_table = storage_candidates[0]
-        rna_data = _read_table(rna_table, ['LTS RNA'])
-        for label, cols in rna_data.items():
-            storage.setdefault(label, {}).update(cols)
+    result: dict[str, dict] = {}
+    for table_role, tbl_idx in roles.items():
+        if tbl_idx is None:
+            continue
+        table = doc.tables[tbl_idx]
+        header_cells = row_cells(table.rows[0])
+        matched_cols = _match_columns_for_table(header_cells, registry_by_role.get(table_role, []))
+        if not matched_cols:
+            continue
 
-    return referral, storage
+        rows: dict[str, dict[str, str]] = {}
+        has_data = {c['key']: False for c in matched_cols}
+        for r in table.rows[1:]:
+            cells = row_cells(r)
+            if not cells:
+                continue
+            label = cells[0].text.strip()
+            if not label:
+                continue
+            row_values = {}
+            for c in matched_cols:
+                idx = c['col_index']
+                if idx < len(cells):
+                    val = cells[idx].text.strip()
+                    if val:
+                        row_values[c['key']] = val  # raw value -- the user's own choice to select
+                        if not _is_placeholder(val):
+                            has_data[c['key']] = True
+            if row_values:
+                rows[label] = row_values
+
+        result[table_role] = {
+            'table_idx': tbl_idx,
+            'columns': [{**c, 'has_data': has_data[c['key']]} for c in matched_cols],
+            'rows': rows,
+        }
+    return result
 
 
 if __name__ == '__main__':
+    import json
     import sys
+
     path = sys.argv[1] if len(sys.argv) > 1 else ''
-    ref, sto = build(path)
-    print('=== REFERRAL (LTS PK) ===')
-    for lab, c in ref.items():
-        print(f'  {lab:42} -> {c.get("LTS PK", "")!r}')
-    print('\n=== STORAGE (DNA | Serum | Plasma | RNA) ===')
-    for lab, c in sto.items():
-        print(f'  {lab:42} | {c.get("LTS DNA",""):20} | {c.get("LTS Serum",""):14} | '
-              f'{c.get("LTS Plasma",""):12} | {c.get("LTS RNA","")}')
+    print(json.dumps(build(path), indent=2))

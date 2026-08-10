@@ -144,6 +144,38 @@ def insert_column_after(table, col_index: int, header_text: str) -> int:
     return new_index
 
 
+def delete_columns(table, col_indices) -> None:
+    """Removes the columns at `col_indices` (0-indexed) entirely -- the matching
+    <w:gridCol> from <w:tblGrid>, and each row's container (a plain <w:tc>, or
+    the wrapping <w:sdt> for a content-control cell -- see row_cells()'s own
+    docstring) at that position. Inverse of insert_column_after().
+
+    Rows already fully merged at a given index (fewer containers than the
+    column count -- e.g. a free-text "shipping instructions" row spanning
+    every column as one cell) simply have nothing to remove there and are left
+    untouched, same convention insert_column_after() already uses.
+
+    `col_indices` may be given in any order -- they're processed internally in
+    descending order so removing one column never shifts the position of
+    another one still queued for removal. Duplicate indices are ignored."""
+    tbl = table._tbl
+    grid = tbl.find(f'{_W_NS}tblGrid')
+    grid_cols = grid.findall(f'{_W_NS}gridCol') if grid is not None else []
+
+    for col_index in sorted(set(col_indices), reverse=True):
+        if col_index < len(grid_cols):
+            grid_col = grid_cols[col_index]
+            grid_col.getparent().remove(grid_col)
+            grid_cols.pop(col_index)
+
+        for row in table.rows:
+            containers = _row_containers(row)
+            if col_index >= len(containers):
+                continue  # fully merged row at this position -- nothing to remove
+            container, _tc = containers[col_index]
+            container.getparent().remove(container)
+
+
 def _xml_escape(text: str) -> str:
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 

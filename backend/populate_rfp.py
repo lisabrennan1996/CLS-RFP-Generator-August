@@ -569,7 +569,8 @@ def main(protocol_text: str, design_text: str,
          soa_table_override: Optional[dict] = None,
          lab_table_override: Optional[list] = None,
          field_overrides: Optional[dict] = None,
-         clips_nonpkpd_assignments: Optional[list] = None) -> Report:
+         clips_nonpkpd_assignments: Optional[list] = None,
+         previous_rfp_column_selection: Optional[dict] = None) -> Report:
     """Run the full RFP population pipeline.
 
     Args:
@@ -611,6 +612,19 @@ def main(protocol_text: str, design_text: str,
                            source at a time -- if given, this wins outright and
                            previous_rfp_path's own Referral/Storage data is not used at
                            all (see the specimen-mgmt block below).
+        previous_rfp_column_selection: Optional {table_role: [column_key, ...]}
+                           (table_role one of "referral"/"storage_wide"/
+                           "storage_narrow", column_key from
+                           specimen_columns.list_columns()) -- which of
+                           previous_rfp_path's real columns to actually use.
+                           Any column NOT listed is DELETED from that table
+                           in the output entirely (not just left blank) --
+                           see build_specimen.py/docx_table_ops.delete_columns().
+                           Only meaningful together with previous_rfp_path,
+                           and only when clips_nonpkpd_assignments is NOT
+                           given. If omitted (e.g. an older caller), falls
+                           back to the original fixed 6-column behavior with
+                           no deletion, for backward compatibility.
 
     Returns:
         Report dataclass with findings and coverage stats.
@@ -1199,16 +1213,69 @@ def main(protocol_text: str, design_text: str,
             else:
                 nsto += _n
     else:
-        from build_specimen import build as build_specimen
+        from build_specimen import build as build_specimen_preview
         try:
-            referral, storage = build_specimen(previous_rfp_path)
+            _preview = build_specimen_preview(previous_rfp_path) if previous_rfp_path else {}
         except Exception as _e:
             logger.warning('build_specimen failed: %s', _e)
-            referral, storage = {}, {}
-        nref = fill_spec(doc, T18, 'LTS PK', referral, single_col=True)
-        nref += fill_spec(doc, T18, 'LTS Immunogenicity', referral, single_col=False)
-        nsto = sum(fill_spec(doc, T20, c, storage, single_col=False) for c in ('LTS DNA', 'LTS Serum', 'LTS Plasma'))
-        nsto += fill_spec(doc, T22, 'LTS RNA', storage, single_col=False)
+            _preview = {}
+
+        _table_by_role = {'referral': T18, 'storage_wide': T20, 'storage_narrow': T22}
+        nref = 0
+        nsto = 0
+
+        if previous_rfp_column_selection is not None:
+            # New flow: delete every column NOT selected, write only the selected ones.
+            from docx_table_ops import delete_columns
+            for _table_role, _table_data in _preview.items():
+                _tidx = _table_by_role.get(_table_role)
+                if _tidx is None:
+                    continue
+                _selected_keys = set(previous_rfp_column_selection.get(_table_role) or [])
+                _columns = _table_data['columns']
+                _selected_cols = [c for c in _columns if c['key'] in _selected_keys]
+                _unselected_indices = [c['col_index'] for c in _columns if c['key'] not in _selected_keys]
+                try:
+                    delete_columns(doc.tables[_tidx], _unselected_indices)
+                except Exception as _e:
+                    logger.warning('delete_columns failed for %s: %s', _table_role, _e)
+                    continue
+                for _col in sorted(_selected_cols, key=lambda c: c['col_index']):
+                    _shift = sum(1 for u in _unselected_indices if u < _col['col_index'])
+                    _row_data = {
+                        _label: _vals[_col['key']]
+                        for _label, _vals in _table_data['rows'].items()
+                        if _col['key'] in _vals
+                    }
+                    _n = fill_spec_by_index(
+                        doc, _tidx, _col['col_index'] - _shift, _col['base_label'], _row_data,
+                        single_col=(_col['base_label'] == 'LTS PK'),
+                    )
+                    if _table_role == 'referral':
+                        nref += _n
+                    else:
+                        nsto += _n
+        else:
+            # Backward-compatible fallback (no selection given): the original fixed
+            # 6-column behavior, no deletion -- reshape the preview's {key: value} rows
+            # back into fill_spec()'s {column_name: value} shape.
+            def _to_old_shape(table_role):
+                table_data = _preview.get(table_role) or {}
+                key_to_label = {c['key']: c['base_label'] for c in table_data.get('columns', [])}
+                return {
+                    row_label: {key_to_label[k]: v for k, v in vals.items() if k in key_to_label}
+                    for row_label, vals in table_data.get('rows', {}).items()
+                }
+
+            referral = _to_old_shape('referral')
+            storage = _to_old_shape('storage_wide')
+            for _label, _cols in _to_old_shape('storage_narrow').items():
+                storage.setdefault(_label, {}).update(_cols)
+
+            nref = fill_spec(doc, T18, 'LTS PK', referral, single_col=True)
+            nref += fill_spec(doc, T18, 'LTS Immunogenicity', referral, single_col=False)
+            nsto = sum(fill_spec(doc, T20, c, storage, single_col=False) for c in ('LTS DNA', 'LTS Serum', 'LTS Plasma'))
+            nsto += fill_spec(doc, T22, 'LTS RNA', storage, single_col=False)
 
     if clips_nonpkpd_assignments:
         _specimen_source = f"{len([a for a in clips_nonpkpd_assignments if a.get('column')])} CLIPS/Non-PKPD file(s)"

@@ -144,8 +144,8 @@
       case 'pick_document': {
         // .docx (not .doc -- python-docx can't read the legacy binary format) is kept here
         // for "Previous RFP" attachment, which reads a .docx directly and never needs
-        // conversion; the main protocol upload and "Design Elements" attach only accept a
-        // PDF in practice (Word conversion isn't supported -- see documents.py).
+        // conversion; the main protocol upload only accepts a PDF in practice (Word
+        // conversion isn't supported -- see documents.py).
         const file = await pickFileViaInput('.pdf,.docx');
         const uploaded = await uploadFileToServer(file);
         return { path: uploaded.file_id, name: uploaded.name };
@@ -185,6 +185,8 @@
         // Same JSON-encoded-string contract as extract_rfp_schema above -- call sites already
         // JSON.parse() the result, matching the Tauri command's own return shape.
         return JSON.stringify(await apiPost('clips-nonpkpd-preview', { paths: args.paths }));
+      case 'preview_previous_rfp':
+        return JSON.stringify(await apiPost('preview-previous-rfp', { path: args.path }));
       case 'fetch_fabric_design_fields':
         return JSON.stringify(await apiPost('fabric-design-fields', { protocolAlias: args.protocolAlias }));
       default:
@@ -261,8 +263,17 @@
     thumbnailModalPageIndex: 0, // which group of THUMBNAIL_MODAL_PAGE_SIZE pages is showing
 
     // ---- Generate RFP (master-table screen) ----
-    designDoc: null, // { path, name } | null -- optional, uploaded from the master-table toolbar
     previousRfpDoc: null, // { path, name } | null
+    // {table_role: {"table_idx", "columns": [{key, table_role, col_index, base_label,
+    // display_label, tag, has_data}], "rows": {row_label: {col_key: value}}}} from
+    // POST /api/preview-previous-rfp (see build_specimen.py's own docstring for the exact
+    // shape) -- null until a Previous RFP is attached and its preview call resolves.
+    previousRfpPreview: null,
+    // {table_role: [column_key, ...]} -- which of previousRfpPreview's real columns the
+    // user has checked. Defaults to every column with has_data=true once the preview
+    // loads, but stays live-editable via checkboxes; sent as previousRfpColumnSelection
+    // in the generate-rfp payload. null until a preview has loaded at least once.
+    previousRfpColumnSelection: null,
     // Design/ops fields (Therapeutic Area, Phase, Pediatric flag, Country Allocation,
     // enrollment/screen counts, trial milestones) fetched automatically from Fabric by whatever
     // protocol alias extract_rfp_schema found -- see maybeAutoSearchFabricDesignFields. Kept
@@ -306,8 +317,8 @@
     kitType: '', // 'Standard collection kit' | 'Custom kit' | ''
 
     // ---- Live-preview of extract_rfp_schema's findings (Information/Countries) ----
-    // Flat {fieldName: value} map, rebuilt after parsing and after attaching Design Elements or
-    // a Previous RFP — whichever of those last ran. null until the first successful extraction.
+    // Flat {fieldName: value} map, rebuilt after parsing and after attaching a Previous RFP —
+    // whichever of those last ran. null until the first successful extraction.
     extractedFields: null,
   };
 
@@ -345,26 +356,20 @@
   }
 
   // ---------------- engine bootstrap ----------------
-  // No model weights to download and cache like the earlier OCR pipeline — this just confirms
-  // the bundled camelot-worker executable is present before enabling Parse Document.
+  // The desktop app bundled a separate camelot-worker.exe sidecar process and needed to
+  // confirm it was present ('get_worker_status') before enabling Parse Document. The webapp
+  // has no such sidecar at all -- Camelot/pdfplumber run in-process inside the FastAPI
+  // backend itself (see backend/services/tables_extract.py) -- so there's nothing to check
+  // here; a real import/dependency problem would surface as a clear error from the actual
+  // /api/extract-tables call instead. This just marks the engine ready immediately so Parse
+  // Document is enabled as soon as a file is picked.
   function setModelStatus(kind, text) {
     $('#modelStatusDot').className = 'status-dot status-' + kind;
     $('#modelStatusText').textContent = text;
   }
 
   async function bootstrapModel() {
-    try {
-      const status = await invoke('get_worker_status');
-      if (status.ready) {
-        setModelStatus('ready', 'Ready');
-      } else {
-        setModelStatus('error', 'Worker not found');
-        showToast('The camelot-worker executable is missing from this install.', 'error');
-      }
-    } catch (err) {
-      setModelStatus('error', 'Status check failed');
-      showToast('Could not check engine status: ' + err, 'error');
-    }
+    setModelStatus('ready', 'Ready');
     updateParseButtonState();
   }
 
@@ -1418,16 +1423,18 @@
     renderCountryChips();
   }
 
-  // Fire-and-forget: called after parsing and after attaching Design Elements/Previous RFP, since
-  // each of those changes what extract_rfp_schema would return. No error toast -- this is passive
-  // background enrichment for the Information/Countries live previews, not a user-initiated
-  // action; a failure just leaves those fields showing their placeholder hint text, same as
-  // before this feature existed.
+  // Fire-and-forget: called after parsing and after attaching Previous RFP, since that changes
+  // what extract_rfp_schema would return. No error toast -- this is passive background
+  // enrichment for the Information/Countries live previews, not a user-initiated action; a
+  // failure just leaves those fields showing their placeholder hint text, same as before this
+  // feature existed. Design/ops fields come from the Fabric extract lookup (see
+  // maybeAutoSearchFabricDesignFields below), not a design_text extraction pass -- design_text
+  // is always empty now that Design Elements attachment has been removed.
   async function refreshExtractedFieldsPreview() {
     if (!state.pageResults.length) return;
     try {
       const protocolText = state.pageResults.map((r) => r.markdown).join('\n\n');
-      const designText = docFullTextFor(state.designDoc);
+      const designText = '';
       const previousRfpPath = state.previousRfpDoc ? state.previousRfpDoc.path : null;
       const schemaRaw = await invoke('extract_rfp_schema', { protocolText, designText, previousRfpPath });
       state.extractedFields = flattenSchemaFields(JSON.parse(schemaRaw));
@@ -1445,8 +1452,8 @@
     }
   }
 
-  // Fetches the same design/ops fields Design Elements provides (Therapeutic Area, Phase,
-  // Pediatric flag, Country Allocation, enrollment/screen counts, trial milestones), keyed by the
+  // Fetches design/ops fields (Therapeutic Area, Phase, Pediatric flag, Country Allocation,
+  // enrollment/screen counts, trial milestones) from the local Fabric extract, keyed by the
   // protocol alias extract_rfp_schema already found in the uploaded protocol -- there's no UI for
   // this at all (no input, no button): it's triggered automatically from
   // refreshExtractedFieldsPreview once a "Protocol alias" value is known, and only re-runs if that
@@ -1611,12 +1618,11 @@
     wireSpecimenSegmented();
   }
 
-  // Design Elements/Previous RFP are attached from the source panel, on a different screen than
-  // where Generate RFP lives -- this one-line status keeps what's attached visible without
-  // needing to go back and check.
+  // Previous RFP is attached from the source panel, on a different screen than where Generate
+  // RFP lives -- this one-line status keeps what's attached visible without needing to go back
+  // and check.
   function renderAttachmentsStatus() {
     const parts = [];
-    parts.push(state.designDoc ? `Design Elements: ${state.designDoc.name}` : 'Design Elements: not attached');
     parts.push(state.previousRfpDoc ? `Previous RFP: ${state.previousRfpDoc.name}` : 'Previous RFP: not attached');
     parts.push(state.fabricProtocolAlias ? `Fabric: ${state.fabricProtocolAlias}` : 'Fabric: not searched');
     if (state.clipsNonPkpdFiles.length) {
@@ -2135,38 +2141,6 @@
     return { headers, rows };
   }
 
-  function docFullTextFor(doc) {
-    return doc ? doc.pages.map((p) => p.markdown).join('\n\n') : '';
-  }
-
-  async function attachDesignElements() {
-    const btn = $('#attachDesignElementsBtn');
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Parsing…';
-    try {
-      const picked = await invoke('pick_document');
-      // extract_tables needs a real PDF (Camelot reads the PDF's own text layer) -- unlike
-      // Previous RFP (read directly as a .docx by build_specimen.py, never converted), this path
-      // was missing the same docx->PDF conversion selectFile() already does for the main upload.
-      const workingPath = await invoke('ensure_pdf_path', { path: picked.path });
-      const pages = await invoke('extract_tables', {
-        path: workingPath,
-        flavor: FLAVOR,
-        tableAreasByPage: {},
-        flavorByPage: {},
-      });
-      state.designDoc = { path: workingPath, name: picked.name, pages };
-      btn.textContent = `Design: ${picked.name}`;
-      refreshExtractedFieldsPreview();
-    } catch (err) {
-      btn.textContent = original;
-      if (!isCancelled(err)) showToast('Could not parse Design Elements document: ' + err, 'error');
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
   // Referral Lab & Storage Samples has exactly one source at a time -- Previous RFP or
   // CLIPS/Non-PKPD worksheets, never both (updateSpecimenSourceUI already disables each button
   // while the other has data; this is the defensive backstop in case either gets called anyway).
@@ -2183,6 +2157,23 @@
       btn.textContent = `Previous RFP: ${picked.name}`;
       renderAttachmentsStatus();
       refreshExtractedFieldsPreview();
+
+      btn.textContent = 'Loading tables…';
+      try {
+        state.previousRfpPreview = JSON.parse(await invoke('preview_previous_rfp', { path: picked.path }));
+      } catch (err) {
+        state.previousRfpPreview = null;
+        showToast('Could not preview Previous RFP tables: ' + err, 'error');
+      }
+      // Default the selection to whichever columns actually have real data in this
+      // previous RFP -- still fully editable, this is just a starting point so the
+      // common case (bring over everything that was filled in) needs no clicking.
+      state.previousRfpColumnSelection = {};
+      for (const [tableRole, tableData] of Object.entries(state.previousRfpPreview || {})) {
+        state.previousRfpColumnSelection[tableRole] = tableData.columns.filter((c) => c.has_data).map((c) => c.key);
+      }
+      btn.textContent = `Previous RFP: ${picked.name}`;
+      renderPreviousRfpPreview();
     } catch (err) {
       btn.textContent = original;
       if (!isCancelled(err)) showToast('Could not read Previous RFP document: ' + err, 'error');
@@ -2191,9 +2182,69 @@
 
   function clearPreviousRfp() {
     state.previousRfpDoc = null;
+    state.previousRfpPreview = null;
+    state.previousRfpColumnSelection = null;
     $('#attachPreviousRfpBtn').textContent = '+ Previous RFP';
+    renderPreviousRfpPreview();
     renderAttachmentsStatus();
     refreshExtractedFieldsPreview();
+  }
+
+  const PREVIOUS_RFP_TABLE_TITLES = {
+    referral: 'Referral Lab',
+    storage_wide: 'Storage Samples',
+    storage_narrow: 'Storage Samples (RNA/Tissue)',
+  };
+
+  // Renders one checkbox per real column across the previous RFP's 3 specimen tables --
+  // "choose which columns to bring over" is the actual selection mechanism here (unlike
+  // SoA/Lab Appendix's crop-region UI, which solves a PDF-table-detection-ambiguity
+  // problem this docx-table case doesn't have at all, see build_specimen.py). Every
+  // column NOT checked at Generate RFP time is deleted from that table in the output
+  // entirely, not just left blank -- see populate_rfp.py's own previous_rfp_column_selection
+  // handling.
+  function renderPreviousRfpPreview() {
+    const container = $('#previousRfpPreview');
+    container.innerHTML = '';
+    if (!state.previousRfpPreview) {
+      container.hidden = true;
+      return;
+    }
+    container.hidden = false;
+
+    for (const [tableRole, title] of Object.entries(PREVIOUS_RFP_TABLE_TITLES)) {
+      const tableData = state.previousRfpPreview[tableRole];
+      if (!tableData || !tableData.columns.length) continue;
+
+      const group = document.createElement('div');
+      group.className = 'previous-rfp-table-group';
+      const heading = document.createElement('div');
+      heading.className = 'previous-rfp-table-title';
+      heading.textContent = title;
+      group.appendChild(heading);
+
+      tableData.columns.forEach((col) => {
+        const row = document.createElement('label');
+        row.className = 'previous-rfp-column-row';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        const selected = state.previousRfpColumnSelection[tableRole] || [];
+        checkbox.checked = selected.includes(col.key);
+        checkbox.addEventListener('change', () => {
+          const current = new Set(state.previousRfpColumnSelection[tableRole] || []);
+          if (checkbox.checked) current.add(col.key);
+          else current.delete(col.key);
+          state.previousRfpColumnSelection[tableRole] = [...current];
+        });
+        row.appendChild(checkbox);
+        const label = document.createElement('span');
+        label.textContent = col.display_label + (col.has_data ? '' : ' (empty)');
+        row.appendChild(label);
+        group.appendChild(row);
+      });
+
+      container.appendChild(group);
+    }
   }
 
   // Lazily fetches + caches the real column registry (specimen_columns.py, via
@@ -2450,7 +2501,7 @@
       }
 
       const protocolText = state.pageResults.map((r) => r.markdown).join('\n\n');
-      const designText = docFullTextFor(state.designDoc);
+      const designText = ''; // Design Elements attachment removed -- Fabric extract lookup covers these fields instead.
       const previousRfpPath = state.previousRfpDoc ? state.previousRfpDoc.path : null;
 
       // Reuses the extraction the Information/Countries live previews already fetched (see
@@ -2482,6 +2533,14 @@
         ? JSON.stringify(clipsNonPkpdAssigned.map((f) => ({ path: f.path, column: f.column })))
         : null;
 
+      // Only sent when a Previous RFP is actually attached -- omitted (not just empty)
+      // otherwise, since populate_rfp.py treats "omitted" as "no selection made, use the
+      // original no-deletion fallback behavior" vs. "given" as "delete every unselected
+      // column," and those are genuinely different outcomes, not equivalent defaults.
+      const previousRfpColumnSelection = previousRfpPath && state.previousRfpColumnSelection
+        ? JSON.stringify(state.previousRfpColumnSelection)
+        : null;
+
       const raw = await invoke('populate_rfp_docx', {
         protocolText,
         outputPath,
@@ -2490,6 +2549,7 @@
         labTableOverride: labTableOverride ? JSON.stringify(labTableOverride) : null,
         protocolPdfPath: state.pickedFile ? state.pickedFile.path : null,
         previousRfpPath,
+        previousRfpColumnSelection,
         fieldOverrides,
         answers: JSON.stringify(readStudyAnswers()),
         clipsNonpkpdAssignments,
@@ -2503,13 +2563,13 @@
     }
   }
 
-  // attachDesignElements/attachPreviousRfp/attachClipsNonPkpdFiles' buttons live in the source
-  // panel now (attach at the start, alongside the protocol upload) -- wired here regardless,
-  // since IDs are unique and this function already owns all of the master-table screen's
-  // RFP-related wiring. There's no Fabric search control to wire -- see
+  // attachPreviousRfp/attachClipsNonPkpdFiles' buttons live in the source panel now (attach at
+  // the start, alongside the protocol upload) -- wired here regardless, since IDs are unique
+  // and this function already owns all of the master-table screen's RFP-related wiring. There's
+  // no Design Elements control to wire (removed -- Fabric extract lookup covers those fields
+  // instead) and no Fabric search control to wire either -- see
   // maybeAutoSearchFabricDesignFields, triggered automatically instead.
   function wireMasterTableRfp() {
-    $('#attachDesignElementsBtn').addEventListener('click', attachDesignElements);
     $('#attachPreviousRfpBtn').addEventListener('click', attachPreviousRfp);
     $('#clearPreviousRfpBtn').addEventListener('click', clearPreviousRfp);
     $('#attachClipsNonPkpdBtn').addEventListener('click', attachClipsNonPkpdFiles);

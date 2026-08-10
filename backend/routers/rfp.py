@@ -30,6 +30,7 @@ from populate_rfp import main as populate_rfp_main  # noqa: E402
 from clips_nonpkpd_parser import parse_files as clips_nonpkpd_parse_files  # noqa: E402
 from fabric_extract_lookup import lookup as fabric_lookup  # noqa: E402
 from specimen_columns import list_columns as specimen_list_columns  # noqa: E402
+from build_specimen import build as build_specimen_preview  # noqa: E402
 
 router = APIRouter(prefix="/api", tags=["rfp"])
 
@@ -98,6 +99,12 @@ class GenerateRfpRequest(CamelModel):
     # `path` here is a session file id (see /api/upload-multi) rather than a filesystem path,
     # resolved to a real path below the same way protocol_pdf_path/previous_rfp_path already are.
     clips_nonpkpd_assignments: Optional[str] = None
+    # JSON-encoded {table_role: [column_key, ...]} from the /api/preview-previous-rfp
+    # selection UI -- which of previous_rfp_path's real columns to keep; every other
+    # column is deleted from that table in the output. Omit entirely (not just empty)
+    # for the original no-deletion fallback behavior -- see populate_rfp.main()'s own
+    # docstring for the exact semantics of "omitted" vs "given but empty".
+    previous_rfp_column_selection: Optional[str] = None
 
 
 @router.post("/generate-rfp")
@@ -141,6 +148,7 @@ async def generate_rfp(body: GenerateRfpRequest, x_session_id: str = Header(...)
             lab_table_override=_parse_json_field(body.lab_table_override),
             field_overrides=_flatten_field_overrides(_parse_json_field(body.field_overrides)),
             clips_nonpkpd_assignments=clips_nonpkpd_assignments,
+            previous_rfp_column_selection=_parse_json_field(body.previous_rfp_column_selection),
         )
     except Exception as exc:  # noqa: BLE001 - surfaced to the user as a normal error response,
         # matching rfp.rs's own catch-all "RFP engine call failed" behavior.
@@ -175,6 +183,22 @@ async def clips_nonpkpd_preview(body: ClipsNonPkpdPreviewRequest, x_session_id: 
     this router). Returns `{"files": [...], "unmapped": [...]}` unchanged."""
     real_paths = [str(_find_session_file(x_session_id, p)) for p in body.paths]
     return clips_nonpkpd_parse_files(real_paths)
+
+
+class PreviewPreviousRfpRequest(CamelModel):
+    path: str  # file id (see /api/upload)
+
+
+@router.post("/preview-previous-rfp")
+async def preview_previous_rfp(body: PreviewPreviousRfpRequest, x_session_id: str = Header(...)):
+    """Previews a "Previous RFP" attachment's Specimen Management tables before the
+    user commits to using any of them -- resolves the file id to its real session path
+    and calls build_specimen.build() directly in-process. Returns
+    `{table_role: {"table_idx", "columns": [...], "rows": {...}}, ...}` (see
+    build_specimen.py's own docstring for the exact shape) so the frontend can render a
+    per-table column-selection checklist instead of today's fully-silent auto-parse."""
+    real_path = str(_find_session_file(x_session_id, body.path))
+    return build_specimen_preview(real_path)
 
 
 class FabricDesignFieldsRequest(CamelModel):

@@ -311,6 +311,15 @@ body.resizing-col .nav-rail-resize-handle { background: var(--accent-soft); }
 .clips-nonpkpd-row select { font-size: 12px; }
 .clips-nonpkpd-row .icon-btn { flex-shrink: 0; }
 
+.previous-rfp-preview { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+.previous-rfp-table-group {
+  border: 1px solid var(--border); border-radius: 4px; padding: 8px;
+}
+.previous-rfp-table-title { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+.previous-rfp-column-row {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; cursor: pointer;
+}
+
 /* ---------------- Intake's Study Details (yes/no tabs) ---------------- */
 .intake-study-details {
   padding: 12px 16px 16px; border-top: 1px solid var(--border);

@@ -135,7 +135,10 @@
               <h4>Optional attachments</h4>
               <p class="nav-note">Attach these now, before combining tables &mdash; one continuous
               pass, no need to come back for them later.</p>
-              <button class="btn btn-block" id="attachDesignElementsBtn" type="button" title="Optional — drives design/ops fields">+ Design Elements</button>
+              <!-- Design/ops fields (Therapeutic Area, Phase, Pediatric flag, Country Allocation,
+              enrollment/screen counts, Trial Milestones) come from the Fabric extract lookup
+              (maybeAutoSearchFabricDesignFields, triggered automatically after parsing) instead
+              of a manually-attached Design Elements document -- see app.js. -->
 
               <div class="source-specimen-source">
                 <h5>Referral Lab &amp; Storage Samples &mdash; choose one source</h5>
@@ -144,6 +147,10 @@
                     <button class="btn btn-block" id="attachPreviousRfpBtn" type="button" title="Optional — carries over Referral Lab &amp; Storage Samples data">+ Previous RFP</button>
                     <button class="icon-btn" id="clearPreviousRfpBtn" type="button" title="Remove Previous RFP" hidden>&times;</button>
                   </div>
+                  <!-- Populated by renderPreviousRfpPreview() once /api/preview-previous-rfp
+                  returns -- one column-checkbox group per specimen table (Referral Lab,
+                  Storage wide, Storage narrow), plus a confirm button. -->
+                  <div class="previous-rfp-preview" id="previousRfpPreview" hidden></div>
                 </div>
                 <p class="nav-note specimen-source-or">&mdash; or &mdash;</p>
                 <div class="specimen-source-option">
@@ -417,7 +424,7 @@
       <div class="section-body" id="sectionCountries" data-section-panel="countries" hidden>
         <div class="card">
           <div class="card-label">Country Allocation</div>
-          <p class="empty-hint">Optional &mdash; overrides whatever's auto-extracted from Design Elements.</p>
+          <p class="empty-hint">Optional &mdash; overrides whatever's auto-extracted from the Fabric extract lookup.</p>
           <div class="chip-list" id="countryChipList"></div>
           <div class="chip-add-row">
             <input class="text-input" id="countryChipInput" placeholder="Add a country" />
