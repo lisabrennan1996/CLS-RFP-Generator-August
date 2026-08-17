@@ -2161,16 +2161,25 @@
       btn.textContent = 'Loading tables…';
       try {
         state.previousRfpPreview = JSON.parse(await invoke('preview_previous_rfp', { path: picked.path }));
+        // Default the selection to whichever columns actually have real data in this
+        // previous RFP -- still fully editable, this is just a starting point so the
+        // common case (bring over everything that was filled in) needs no clicking.
+        // Only computed on a successful preview -- see the catch below for why a
+        // failed preview must NOT leave this as an empty (but non-null) object.
+        state.previousRfpColumnSelection = {};
+        for (const [tableRole, tableData] of Object.entries(state.previousRfpPreview)) {
+          state.previousRfpColumnSelection[tableRole] = tableData.columns.filter((c) => c.has_data).map((c) => c.key);
+        }
       } catch (err) {
         state.previousRfpPreview = null;
+        // Leave this null (not {}) -- an empty object is still truthy, so it would get
+        // JSON.stringify'd and sent as an explicit "keep zero columns" selection at
+        // generate time, deleting every real column from every specimen table. null is
+        // omitted entirely instead, so the backend auto-selects has-data columns from
+        // its own independent re-parse of the file (see populate_rfp.main()'s own
+        // previous_rfp_column_selection docstring).
+        state.previousRfpColumnSelection = null;
         showToast('Could not preview Previous RFP tables: ' + err, 'error');
-      }
-      // Default the selection to whichever columns actually have real data in this
-      // previous RFP -- still fully editable, this is just a starting point so the
-      // common case (bring over everything that was filled in) needs no clicking.
-      state.previousRfpColumnSelection = {};
-      for (const [tableRole, tableData] of Object.entries(state.previousRfpPreview || {})) {
-        state.previousRfpColumnSelection[tableRole] = tableData.columns.filter((c) => c.has_data).map((c) => c.key);
       }
       btn.textContent = `Previous RFP: ${picked.name}`;
       renderPreviousRfpPreview();
@@ -2483,6 +2492,24 @@
   // field like the other yes/no toggles in this panel so an answer here is never dropped.
 
   async function generateRfpFromMasterTables() {
+    // An unmapped CLIPS/Non-PKPD file (auto-detect couldn't tell which Referral/Storage
+    // column it belongs to, e.g. Urine/CSF/Tissue/"Limited use bmkr" specimen types can
+    // never be auto-detected -- see clips_nonpkpd_parser.py's own module docstring) is
+    // silently excluded from clipsNonPkpdAssigned below rather than guessed. The only
+    // earlier feedback about this is a one-time toast right after attaching (see
+    // attachClipsNonPkpdFiles), easy to miss if Generate happens later -- block here
+    // too, instead of quietly generating an RFP with that file's data left out
+    // entirely, which looks identical to "the Referral/Storage tables didn't populate."
+    const unmappedClipsFiles = state.clipsNonPkpdFiles.filter((f) => !f.column);
+    if (unmappedClipsFiles.length) {
+      showToast(
+        `Pick a Referral/Storage column for: ${unmappedClipsFiles.map((f) => f.name).join(', ')} ` +
+          `— or remove the file(s) — before generating, otherwise their data won't be included.`,
+        'error'
+      );
+      return;
+    }
+
     const soaMerged = mergeNamedTables(window.MasterTableView.getTablesByName('SoA'));
     const labMerged = mergeNamedTables(window.MasterTableView.getTablesByName('Lab Appendix'));
     const soaTableOverride = soaMerged ? { headers: soaMerged.headers, rows: soaMerged.rows, footnotes: '' } : null;
@@ -2533,10 +2560,12 @@
         ? JSON.stringify(clipsNonPkpdAssigned.map((f) => ({ path: f.path, column: f.column })))
         : null;
 
-      // Only sent when a Previous RFP is actually attached -- omitted (not just empty)
-      // otherwise, since populate_rfp.py treats "omitted" as "no selection made, use the
-      // original no-deletion fallback behavior" vs. "given" as "delete every unselected
-      // column," and those are genuinely different outcomes, not equivalent defaults.
+      // Only sent when a Previous RFP is actually attached AND its preview succeeded
+      // (state.previousRfpColumnSelection is null otherwise -- see attachPreviousRfp).
+      // populate_rfp.py auto-selects has-data columns itself for any table role that's
+      // absent here (including when this whole field is omitted), so a failed preview
+      // no longer means "delete every column" -- only an explicit, present selection
+      // (even an empty one) is honored as a deliberate choice.
       const previousRfpColumnSelection = previousRfpPath && state.previousRfpColumnSelection
         ? JSON.stringify(state.previousRfpColumnSelection)
         : null;

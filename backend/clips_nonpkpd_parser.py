@@ -91,6 +91,18 @@ SHARED_ROW_CONDITION_LABELS = (
 )
 SHARED_ROW_CONDITION_VALUE = 'frozen'
 
+# The narrow Storage Samples table (LTS RNA/Tissue) spells the middle condition row
+# "Ship central lab to ref lab for testing" in the real template -- "ref lab", not
+# "referral lab" like the other two specimen tables -- confirmed directly against
+# template.docx. fill_shared_row() matches via the row's own label startswith() the
+# given prefix, so sending the referral/storage_wide spelling for this table silently
+# writes nothing. Only this one label differs, and only for this one table role.
+_SHARED_ROW_LABEL_OVERRIDES = {
+    'storage_narrow': {
+        'Ship central lab to referral lab for testing': 'Ship central lab to ref lab for testing',
+    },
+}
+
 IMMUNOGENICITY_ASSAY_RE = re.compile(r'\bADA\b|\bNAb\b|anti[- ]?drug antibody|neutralizing antibody', re.I)
 SPECIMEN_COLUMN_MAP = {
     'dna': 'LTS DNA',
@@ -371,7 +383,14 @@ def _row_data(fields: dict, table_role: str, effective_doc_type: Optional[str]) 
     }
 
     if fields.get('analyte_name_value'):
-        row_data[ROW_ANALYTE_NAME] = fields['analyte_name_value']
+        # The narrow Storage Samples table (LTS RNA/Tissue) spells this row's label
+        # just "Analyte" in the real template, not "Analyte name" like the other two
+        # specimen tables -- confirmed directly against template.docx. Using
+        # ROW_ANALYTE_NAME there would never match (fill_spec_by_index() matches via
+        # the row's own label startswith() this key, and "Analyte" doesn't start with
+        # "Analyte name"), silently dropping this row for that table only.
+        analyte_row_label = 'Analyte' if table_role == 'storage_narrow' else ROW_ANALYTE_NAME
+        row_data[analyte_row_label] = fields['analyte_name_value']
     if fields.get('sample_type_value'):
         row_data[ROW_SAMPLE_TYPE] = fields['sample_type_value']
     if fields.get('tube_size'):
@@ -514,10 +533,11 @@ def build_from_assignments(assignments: list[dict]) -> tuple[list[dict], list[di
         if groups.get(key)
     }
     for table_role in tables_with_data:
+        overrides = _SHARED_ROW_LABEL_OVERRIDES.get(table_role, {})
         for row_label in SHARED_ROW_CONDITION_LABELS:
             shared_writes.append({
                 'table_role': table_role,
-                'row_label': row_label,
+                'row_label': overrides.get(row_label, row_label),
                 'value': SHARED_ROW_CONDITION_VALUE,
             })
 

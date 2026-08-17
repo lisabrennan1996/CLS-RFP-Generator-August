@@ -180,34 +180,13 @@ def fill(tbl_idx, row, label_sub, value, doc_local):
         logger.warning('fill(%s, row=%s, %r): %s', tbl_idx, row, label_sub, _e)
     return False
 
-def fill_spec(doc_local, tbl_idx, col_name, data, single_col):
-    t = doc_local.tables[tbl_idx]
-    cidx = next((i for i, c in enumerate(t.rows[0].cells)
-                 if col_name.lower() in c.text.lower()), None)
-    if cidx is None: return 0
-    keys = sorted(data.keys(), key=len, reverse=True)
-    n = 0
-    for r in t.rows[1:]:
-        lab = r.cells[0].text.strip()
-        for k in keys:
-            val = data[k].get(col_name)
-            if lab.startswith(k) and val:
-                if cidx < len(r.cells) and r.cells[cidx]._tc is not r.cells[0]._tc:
-                    set_cell_text(r.cells[cidx], val)
-                else:
-                    _append(r.cells[0], val if single_col else f'[{col_name}: {val}]')
-                n += 1; break
-    return n
-
-
 def fill_spec_by_index(doc_local, tbl_idx, col_index, col_label, data, single_col, header_override=None):
-    """Like fill_spec(), but targets a column by its already-known 0-indexed position
+    """Targets a column by its already-known 0-indexed position
     instead of a substring header search -- required once a column's header text isn't
     unique (the template's three identical "Limited use bmkr" cells) or was just created
     by docx_table_ops.insert_column_after and has no other way to be found yet.
-    `data` is a flat {row_label: value} dict for this ONE column (unlike fill_spec()'s
-    {row_label: {column_name: value}} nested shape, since the caller already knows
-    exactly which single column this write targets). `header_override`, if given,
+    `data` is a flat {row_label: value} dict for this ONE column, since the caller
+    already knows exactly which single column this write targets. `header_override`, if given,
     renames the column's existing header cell to this text first (used when a
     pre-existing column is being repurposed as "<label> (1)" of a duplicate-column
     group; the (2)/(3)/... siblings already got their header text set at insertion
@@ -259,8 +238,8 @@ def fill_shared_row(doc_local, tbl_idx, row_label_prefix, value):
     for clips_nonpkpd_parser.SHARED_ROW_CONDITION_LABELS, where a per-column
     write doesn't make sense at all (there's only one cell for the entire row
     regardless of which column a file was assigned to). Finds the row by a
-    startswith match on its label (same convention as fill_spec()/
-    fill_spec_by_index(), robust to a multi-line label like "Ship site to
+    startswith match on its label (same convention as fill_spec_by_index(),
+    robust to a multi-line label like "Ship site to
     central lab\\n         Condition: "), and appends `value` into that row's
     first cell. Returns 1 if a matching row was found and written, else 0."""
     if tbl_idx is None:
@@ -617,14 +596,22 @@ def main(protocol_text: str, design_text: str,
                            "storage_narrow", column_key from
                            specimen_columns.list_columns()) -- which of
                            previous_rfp_path's real columns to actually use.
-                           Any column NOT listed is DELETED from that table
-                           in the output entirely (not just left blank) --
-                           see build_specimen.py/docx_table_ops.delete_columns().
-                           Only meaningful together with previous_rfp_path,
-                           and only when clips_nonpkpd_assignments is NOT
-                           given. If omitted (e.g. an older caller), falls
-                           back to the original fixed 6-column behavior with
-                           no deletion, for backward compatibility.
+                           A table_role present in this dict is honored
+                           exactly as given, even an empty list -- every
+                           column NOT listed is DELETED from that table in
+                           the output entirely (not just left blank), see
+                           build_specimen.py/docx_table_ops.delete_columns().
+                           A table_role that's simply ABSENT from this dict
+                           (including when the whole parameter is omitted/
+                           None) is NOT treated as "select nothing" -- it
+                           auto-selects whichever of that table's columns
+                           actually have real data in previous_rfp_path
+                           (has_data, from build_specimen.build()), so
+                           population happens reliably even if the caller
+                           never computed an explicit selection for that
+                           table. Only meaningful together with
+                           previous_rfp_path, and only when
+                           clips_nonpkpd_assignments is NOT given.
 
     Returns:
         Report dataclass with findings and coverage stats.
@@ -1224,58 +1211,49 @@ def main(protocol_text: str, design_text: str,
         nref = 0
         nsto = 0
 
-        if previous_rfp_column_selection is not None:
-            # New flow: delete every column NOT selected, write only the selected ones.
-            from docx_table_ops import delete_columns
-            for _table_role, _table_data in _preview.items():
-                _tidx = _table_by_role.get(_table_role)
-                if _tidx is None:
-                    continue
-                _selected_keys = set(previous_rfp_column_selection.get(_table_role) or [])
-                _columns = _table_data['columns']
-                _selected_cols = [c for c in _columns if c['key'] in _selected_keys]
-                _unselected_indices = [c['col_index'] for c in _columns if c['key'] not in _selected_keys]
-                try:
-                    delete_columns(doc.tables[_tidx], _unselected_indices)
-                except Exception as _e:
-                    logger.warning('delete_columns failed for %s: %s', _table_role, _e)
-                    continue
-                for _col in sorted(_selected_cols, key=lambda c: c['col_index']):
-                    _shift = sum(1 for u in _unselected_indices if u < _col['col_index'])
-                    _row_data = {
-                        _label: _vals[_col['key']]
-                        for _label, _vals in _table_data['rows'].items()
-                        if _col['key'] in _vals
-                    }
-                    _n = fill_spec_by_index(
-                        doc, _tidx, _col['col_index'] - _shift, _col['base_label'], _row_data,
-                        single_col=(_col['base_label'] == 'LTS PK'),
-                    )
-                    if _table_role == 'referral':
-                        nref += _n
-                    else:
-                        nsto += _n
-        else:
-            # Backward-compatible fallback (no selection given): the original fixed
-            # 6-column behavior, no deletion -- reshape the preview's {key: value} rows
-            # back into fill_spec()'s {column_name: value} shape.
-            def _to_old_shape(table_role):
-                table_data = _preview.get(table_role) or {}
-                key_to_label = {c['key']: c['base_label'] for c in table_data.get('columns', [])}
-                return {
-                    row_label: {key_to_label[k]: v for k, v in vals.items() if k in key_to_label}
-                    for row_label, vals in table_data.get('rows', {}).items()
+        # Delete every column NOT selected, write only the selected ones. A table role
+        # that's simply missing from `previous_rfp_column_selection` (the parameter was
+        # omitted/None entirely, or that specific role's key never arrived -- e.g. the
+        # frontend's own preview round-trip failed) is NOT the same thing as the user
+        # explicitly choosing zero columns: it means no selection info exists at all, so
+        # auto-select whichever columns this previous RFP actually has real data in
+        # (has_data, computed by build_specimen.build() from THIS function's own
+        # independent re-parse above) rather than silently deleting everything. A role
+        # that IS present in the selection, even with an empty list, is honored exactly
+        # as given -- that's a deliberate "delete every column in this table" choice.
+        _selection = previous_rfp_column_selection or {}
+        from docx_table_ops import delete_columns
+        for _table_role, _table_data in _preview.items():
+            _tidx = _table_by_role.get(_table_role)
+            if _tidx is None:
+                continue
+            _columns = _table_data['columns']
+            if _table_role in _selection:
+                _selected_keys = set(_selection[_table_role])
+            else:
+                _selected_keys = {c['key'] for c in _columns if c['has_data']}
+            _selected_cols = [c for c in _columns if c['key'] in _selected_keys]
+            _unselected_indices = [c['col_index'] for c in _columns if c['key'] not in _selected_keys]
+            try:
+                delete_columns(doc.tables[_tidx], _unselected_indices)
+            except Exception as _e:
+                logger.warning('delete_columns failed for %s: %s', _table_role, _e)
+                continue
+            for _col in sorted(_selected_cols, key=lambda c: c['col_index']):
+                _shift = sum(1 for u in _unselected_indices if u < _col['col_index'])
+                _row_data = {
+                    _label: _vals[_col['key']]
+                    for _label, _vals in _table_data['rows'].items()
+                    if _col['key'] in _vals
                 }
-
-            referral = _to_old_shape('referral')
-            storage = _to_old_shape('storage_wide')
-            for _label, _cols in _to_old_shape('storage_narrow').items():
-                storage.setdefault(_label, {}).update(_cols)
-
-            nref = fill_spec(doc, T18, 'LTS PK', referral, single_col=True)
-            nref += fill_spec(doc, T18, 'LTS Immunogenicity', referral, single_col=False)
-            nsto = sum(fill_spec(doc, T20, c, storage, single_col=False) for c in ('LTS DNA', 'LTS Serum', 'LTS Plasma'))
-            nsto += fill_spec(doc, T22, 'LTS RNA', storage, single_col=False)
+                _n = fill_spec_by_index(
+                    doc, _tidx, _col['col_index'] - _shift, _col['base_label'], _row_data,
+                    single_col=(_col['base_label'] == 'LTS PK'),
+                )
+                if _table_role == 'referral':
+                    nref += _n
+                else:
+                    nsto += _n
 
     if clips_nonpkpd_assignments:
         _specimen_source = f"{len([a for a in clips_nonpkpd_assignments if a.get('column')])} CLIPS/Non-PKPD file(s)"
