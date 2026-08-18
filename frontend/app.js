@@ -2205,15 +2205,134 @@
     storage_narrow: 'Storage Samples (RNA/Tissue)',
   };
 
-  // Renders one checkbox per real column across the previous RFP's 3 specimen tables --
-  // "choose which columns to bring over" is the actual selection mechanism here (unlike
-  // SoA/Lab Appendix's crop-region UI, which solves a PDF-table-detection-ambiguity
-  // problem this docx-table case doesn't have at all, see build_specimen.py). Every
-  // column NOT checked at Generate RFP time is deleted from that table in the output
-  // entirely, not just left blank -- see populate_rfp.py's own previous_rfp_column_selection
-  // handling.
+  // ---- Previous RFP column selection: drag-select grid (mirrors master-table.js's own
+  // column drag-select -- see startColumnDrag/extendDragTo/renderSelectionBar there --
+  // scoped per table role since three independent grids render at once here instead of one
+  // active table). Column-only (these rows are the template's own fixed labels, not
+  // freely-structured like a parsed SoA table) and reversible (unlike Master Table's one-way
+  // delete: some real columns legitimately have no data, and the user may want to bring one
+  // back without re-attaching the file) -- see this app's own design discussion for why.
+  let previousRfpDrag = { tableRole: null, indices: new Set() };
+  let previousRfpDragging = false;
+  let previousRfpDragAnchor = null;
+
+  function clearPreviousRfpDrag() {
+    previousRfpDrag = { tableRole: null, indices: new Set() };
+  }
+
+  function startPreviousRfpColumnDrag(tableRole, colIndex) {
+    previousRfpDragging = true;
+    previousRfpDragAnchor = colIndex;
+    previousRfpDrag = { tableRole, indices: new Set([colIndex]) };
+    renderPreviousRfpPreview();
+  }
+
+  function extendPreviousRfpColumnDragTo(tableRole, colIndex) {
+    if (!previousRfpDragging || previousRfpDrag.tableRole !== tableRole || previousRfpDragAnchor == null) return;
+    const lo = Math.min(previousRfpDragAnchor, colIndex);
+    const hi = Math.max(previousRfpDragAnchor, colIndex);
+    const indices = new Set();
+    for (let i = lo; i <= hi; i++) indices.add(i);
+    previousRfpDrag = { tableRole, indices };
+    renderPreviousRfpPreview();
+  }
+
+  // Same reach limitation master-table.js's own column drag-select has for a wide table
+  // (see its wide-table-banner/fullscreen affordance): a column has to actually be on screen
+  // for elementFromPoint() below to find it -- scroll a wide grid manually first (or use the
+  // single-click toggle on any header, which works regardless of scroll position) to reach a
+  // column further along. An auto-scroll-while-dragging enhancement was tried and dropped: it
+  // fought with this view's own re-render-on-every-state-change (confirmed directly -- rapid
+  // drag ticks caused the scroll position to visibly oscillate instead of advancing), which
+  // would be a worse experience than this well-understood, already-precedented limitation.
+  document.addEventListener('mousemove', (e) => {
+    if (!previousRfpDragging) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const th = el && el.closest('th[data-pr-col-index]');
+    if (th && th.dataset.prTableRole === previousRfpDrag.tableRole) {
+      extendPreviousRfpColumnDragTo(previousRfpDrag.tableRole, Number(th.dataset.prColIndex));
+    }
+  });
+  document.addEventListener('mouseup', () => {
+    previousRfpDragging = false;
+    previousRfpDragAnchor = null;
+  });
+
+  function togglePreviousRfpColumn(tableRole, key) {
+    const current = new Set(state.previousRfpColumnSelection[tableRole] || []);
+    if (current.has(key)) current.delete(key);
+    else current.add(key);
+    state.previousRfpColumnSelection[tableRole] = [...current];
+    renderPreviousRfpPreview();
+  }
+
+  function setPreviousRfpColumnsIncluded(tableRole, keys, included) {
+    const current = new Set(state.previousRfpColumnSelection[tableRole] || []);
+    keys.forEach((k) => (included ? current.add(k) : current.delete(k)));
+    state.previousRfpColumnSelection[tableRole] = [...current];
+    clearPreviousRfpDrag();
+    renderPreviousRfpPreview();
+  }
+
+  function renderPreviousRfpSelectionBar(container, tableRole, columns) {
+    if (previousRfpDrag.tableRole !== tableRole || previousRfpDrag.indices.size === 0) return;
+    const keys = columns
+      .map((c, i) => (previousRfpDrag.indices.has(i) ? c.key : null))
+      .filter((k) => k !== null);
+
+    const bar = document.createElement('div');
+    bar.className = 'master-table-selection-bar';
+
+    const label = document.createElement('span');
+    label.textContent = `${keys.length} column${keys.length === 1 ? '' : 's'} selected`;
+
+    const excludeBtn = document.createElement('button');
+    excludeBtn.type = 'button';
+    excludeBtn.className = 'btn btn-secondary';
+    excludeBtn.textContent = 'Exclude';
+    excludeBtn.addEventListener('click', () => setPreviousRfpColumnsIncluded(tableRole, keys, false));
+
+    const includeBtn = document.createElement('button');
+    includeBtn.type = 'button';
+    includeBtn.className = 'btn btn-secondary';
+    includeBtn.textContent = 'Include';
+    includeBtn.addEventListener('click', () => setPreviousRfpColumnsIncluded(tableRole, keys, true));
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'icon-btn';
+    clearBtn.title = 'Clear selection';
+    clearBtn.textContent = '×';
+    clearBtn.addEventListener('click', () => {
+      clearPreviousRfpDrag();
+      renderPreviousRfpPreview();
+    });
+
+    bar.appendChild(label);
+    bar.appendChild(excludeBtn);
+    bar.appendChild(includeBtn);
+    bar.appendChild(clearBtn);
+    container.appendChild(bar);
+  }
+
+  // Renders each of the previous RFP's 3 specimen tables as a real data grid (actual cell
+  // values, not just column names) with the same drag-select-columns interaction as the
+  // Master Table view (master-table.js) -- column-only and reversible, see the design note
+  // above. Every column NOT included at Generate RFP time is deleted from that table in the
+  // output entirely, not just left blank -- see populate_rfp.py's own
+  // previous_rfp_column_selection handling.
   function renderPreviousRfpPreview() {
     const container = $('#previousRfpPreview');
+    // This rebuilds the whole container on every call (including a single-column toggle or a
+    // drag-select tick) -- without capturing/restoring each grid's own scroll position, a user
+    // who scrolled a wide table right to reach a column would find it snapped back to the left
+    // on their very next click, and an in-progress column drag would lose track of where it
+    // started scrolling from (confirmed directly: starting a drag itself triggers a re-render).
+    const scrollByRole = {};
+    container.querySelectorAll('.previous-rfp-grid-wrap[data-pr-table-role]').forEach((el) => {
+      scrollByRole[el.dataset.prTableRole] = { left: el.scrollLeft, top: el.scrollTop };
+    });
+
     container.innerHTML = '';
     if (!state.previousRfpPreview) {
       container.hidden = true;
@@ -2224,6 +2343,9 @@
     for (const [tableRole, title] of Object.entries(PREVIOUS_RFP_TABLE_TITLES)) {
       const tableData = state.previousRfpPreview[tableRole];
       if (!tableData || !tableData.columns.length) continue;
+      const columns = tableData.columns;
+      const selected = new Set(state.previousRfpColumnSelection[tableRole] || []);
+      const rowLabels = Object.keys(tableData.rows);
 
       const group = document.createElement('div');
       group.className = 'previous-rfp-table-group';
@@ -2232,27 +2354,76 @@
       heading.textContent = title;
       group.appendChild(heading);
 
-      tableData.columns.forEach((col) => {
-        const row = document.createElement('label');
-        row.className = 'previous-rfp-column-row';
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        const selected = state.previousRfpColumnSelection[tableRole] || [];
-        checkbox.checked = selected.includes(col.key);
-        checkbox.addEventListener('change', () => {
-          const current = new Set(state.previousRfpColumnSelection[tableRole] || []);
-          if (checkbox.checked) current.add(col.key);
-          else current.delete(col.key);
-          state.previousRfpColumnSelection[tableRole] = [...current];
+      const wrap = document.createElement('div');
+      wrap.className = 'previous-rfp-grid-wrap';
+      wrap.dataset.prTableRole = tableRole;
+      const table = document.createElement('table');
+      table.className = 'master-table-grid previous-rfp-grid';
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      headRow.appendChild(document.createElement('th')); // row-label column spacer
+      columns.forEach((col, colIndex) => {
+        const th = document.createElement('th');
+        th.dataset.prTableRole = tableRole;
+        th.dataset.prColIndex = String(colIndex);
+        const isExcluded = !selected.has(col.key);
+        th.classList.toggle('col-excluded', isExcluded);
+        th.classList.toggle('col-selected', previousRfpDrag.tableRole === tableRole && previousRfpDrag.indices.has(colIndex));
+
+        const grip = document.createElement('span');
+        grip.className = 'col-drag-handle';
+        grip.title = 'Drag to select multiple columns';
+        grip.textContent = '⋮⋮';
+        grip.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startPreviousRfpColumnDrag(tableRole, colIndex);
         });
-        row.appendChild(checkbox);
+
         const label = document.createElement('span');
-        label.textContent = col.display_label + (col.has_data ? '' : ' (empty)');
-        row.appendChild(label);
-        group.appendChild(row);
+        label.textContent = col.display_label + (col.has_data ? '' : ' (no data)');
+        label.title = isExcluded ? 'Excluded -- click to include' : 'Click to exclude';
+        label.style.cursor = 'pointer';
+        label.addEventListener('click', () => togglePreviousRfpColumn(tableRole, col.key));
+
+        th.appendChild(grip);
+        th.appendChild(label);
+        headRow.appendChild(th);
       });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      rowLabels.forEach((rowLabel) => {
+        const tr = document.createElement('tr');
+        const labelTd = document.createElement('td');
+        labelTd.textContent = rowLabel;
+        tr.appendChild(labelTd);
+        columns.forEach((col, colIndex) => {
+          const td = document.createElement('td');
+          td.classList.toggle('col-excluded', !selected.has(col.key));
+          const val = tableData.rows[rowLabel] ? tableData.rows[rowLabel][col.key] : undefined;
+          td.textContent = val == null || val === '' ? '—' : val;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      group.appendChild(wrap);
+
+      renderPreviousRfpSelectionBar(group, tableRole, columns);
 
       container.appendChild(group);
+      // Must happen AFTER container.appendChild(group) -- scrollLeft/scrollTop assignments on
+      // a subtree that isn't connected to the document yet get silently clamped to 0 (no
+      // layout has run, so the browser doesn't know the real scrollable range), which is
+      // exactly why this looked like scroll position was never actually being restored.
+      if (scrollByRole[tableRole]) {
+        wrap.scrollLeft = scrollByRole[tableRole].left;
+        wrap.scrollTop = scrollByRole[tableRole].top;
+      }
     }
   }
 
@@ -2324,20 +2495,44 @@
       // base_label, and auto-detect never returns that one).
       const keyForBaseLabel = (label) => (columns.find((c) => c.base_label === label) || {}).key || '';
       const manualColumnByPath = new Map(state.clipsNonPkpdFiles.map((f) => [f.path, f.column]));
+      // result.files[i].name is derived server-side from the file's on-disk SESSION path
+      // (a random file id, e.g. "861cae7450f4....pdf"), not the name the user actually
+      // picked -- confirmed directly (clips_nonpkpd_parser.parse_one() does
+      // Path(path).name on the resolved session path, which was never the original
+      // filename). The real name only exists here, in this attach call's own `uploaded`
+      // response (new files) or an already-attached file's own prior state entry
+      // (existing files); use those instead, or the list shows a meaningless hex string
+      // in place of the real filename, which reads exactly like "the file wasn't
+      // accepted" even when extraction actually succeeded.
+      const originalNameByPath = new Map([
+        ...state.clipsNonPkpdFiles.map((f) => [f.path, f.name]),
+        ...uploaded.map((f) => [f.file_id, f.name]),
+      ]);
       state.clipsNonPkpdFiles = result.files.map((f) => ({
         path: f.path,
-        name: f.name,
+        name: originalNameByPath.get(f.path) || f.name,
         docType: f.doc_type,
         column: manualColumnByPath.has(f.path) ? manualColumnByPath.get(f.path) : keyForBaseLabel(f.column),
         fields: f.fields,
+        error: f.error || null,
       }));
       renderClipsNonPkpdList();
       renderAttachmentsStatus();
-      if (result.unmapped && result.unmapped.length) {
+      // Built from the final state (real names) rather than result.unmapped (garbled
+      // on-disk names -- see above).
+      const unmappedNames = state.clipsNonPkpdFiles.filter((f) => !f.column).map((f) => f.name);
+      if (unmappedNames.length) {
         showToast(
-          `Could not auto-detect a Referral/Storage column for: ${result.unmapped.join(', ')} ` +
+          `Could not auto-detect a Referral/Storage column for: ${unmappedNames.join(', ')} ` +
             `— data was still extracted from these file(s), pick a column for each from the dropdown ` +
             `so they're included when the RFP is generated.`,
+          'error'
+        );
+      }
+      const failedFiles = state.clipsNonPkpdFiles.filter((f) => f.error);
+      if (failedFiles.length) {
+        showToast(
+          `Could not extract data from: ${failedFiles.map((f) => `${f.name} (${f.error})`).join('; ')}`,
           'error'
         );
       }
@@ -2368,8 +2563,8 @@
 
       const name = document.createElement('span');
       name.className = 'clips-nonpkpd-row-name';
-      name.title = file.name;
-      name.textContent = file.name;
+      name.title = file.error ? `Extraction failed: ${file.error}` : file.name;
+      name.textContent = file.error ? `⚠ ${file.name}` : file.name;
       row.appendChild(name);
 
       const select = document.createElement('select');

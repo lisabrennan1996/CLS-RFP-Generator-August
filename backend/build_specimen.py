@@ -103,38 +103,47 @@ def build(previous_rfp_path: str) -> dict:
     for table_role, tbl_idx in roles.items():
         if tbl_idx is None:
             continue
-        table = doc.tables[tbl_idx]
-        header_cells = row_cells(table.rows[0])
-        matched_cols = _match_columns_for_table(header_cells, registry_by_role.get(table_role, []))
-        if not matched_cols:
+        try:
+            table = doc.tables[tbl_idx]
+            header_cells = row_cells(table.rows[0])
+            matched_cols = _match_columns_for_table(header_cells, registry_by_role.get(table_role, []))
+            if not matched_cols:
+                continue
+
+            rows: dict[str, dict[str, str]] = {}
+            has_data = {c['key']: False for c in matched_cols}
+            for r in table.rows[1:]:
+                cells = row_cells(r)
+                if not cells:
+                    continue
+                label = cells[0].text.strip()
+                if not label:
+                    continue
+                row_values = {}
+                for c in matched_cols:
+                    idx = c['col_index']
+                    if idx < len(cells):
+                        val = cells[idx].text.strip()
+                        if val:
+                            row_values[c['key']] = val  # raw value -- the user's own choice to select
+                            if not _is_placeholder(val):
+                                has_data[c['key']] = True
+                if row_values:
+                    rows[label] = row_values
+
+            result[table_role] = {
+                'table_idx': tbl_idx,
+                'columns': [{**c, 'has_data': has_data[c['key']]} for c in matched_cols],
+                'rows': rows,
+            }
+        except Exception:
+            # One table role's own unexpected shape (a previous RFP whose table structure
+            # predates/postdates this template's -- e.g. a genuinely missing row/column
+            # elsewhere in the doc that the header-keyword heuristic still located) shouldn't
+            # take down the other two roles' previews with it; skip just this one; the
+            # generate-time server-side auto-default (see populate_rfp.main()) already
+            # tolerates a role being entirely absent here.
             continue
-
-        rows: dict[str, dict[str, str]] = {}
-        has_data = {c['key']: False for c in matched_cols}
-        for r in table.rows[1:]:
-            cells = row_cells(r)
-            if not cells:
-                continue
-            label = cells[0].text.strip()
-            if not label:
-                continue
-            row_values = {}
-            for c in matched_cols:
-                idx = c['col_index']
-                if idx < len(cells):
-                    val = cells[idx].text.strip()
-                    if val:
-                        row_values[c['key']] = val  # raw value -- the user's own choice to select
-                        if not _is_placeholder(val):
-                            has_data[c['key']] = True
-            if row_values:
-                rows[label] = row_values
-
-        result[table_role] = {
-            'table_idx': tbl_idx,
-            'columns': [{**c, 'has_data': has_data[c['key']]} for c in matched_cols],
-            'rows': rows,
-        }
     return result
 
 

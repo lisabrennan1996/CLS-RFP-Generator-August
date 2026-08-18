@@ -316,8 +316,14 @@ body.resizing-col .nav-rail-resize-handle { background: var(--accent-soft); }
   border: 1px solid var(--border); border-radius: 4px; padding: 8px;
 }
 .previous-rfp-table-title { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
-.previous-rfp-column-row {
-  display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 2px 0; cursor: pointer;
+/* The grid itself reuses .master-table-grid's own borders/padding/th.col-selected/
+   .col-drag-handle rules (see master-table.js's own styling below) -- only the
+   scroll wrapper and the reversible-exclude look are specific to this view. */
+.previous-rfp-grid-wrap {
+  max-height: 280px; overflow: auto; border: 1px solid var(--border); border-radius: 4px;
+}
+.previous-rfp-grid th.col-excluded, .previous-rfp-grid td.col-excluded {
+  opacity: 0.45; text-decoration: line-through;
 }
 
 /* ---------------- Intake's Study Details (yes/no tabs) ---------------- */

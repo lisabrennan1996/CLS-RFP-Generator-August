@@ -334,7 +334,28 @@ def column_for(doc_type: Optional[str], fields: dict) -> Optional[str]:
 
 
 def parse_files(paths: list[str]) -> dict:
-    files = [parse_one(p) for p in paths]
+    """Parses each file independently -- a single unreadable/unparseable file (scanned
+    image PDF with no text layer, password-protected, corrupt, or any other extraction
+    failure in parse_one()/pdfplumber) is caught and reported per-file via `error`
+    rather than aborting the whole batch. Without this, one bad file among several
+    would previously blow up the entire request with an opaque 500 from the router,
+    silently preventing every OTHER file in the same batch from being attached too --
+    confirmed directly: parse_one() has no try/except of its own, and neither did this
+    function nor its only HTTP caller (routers/rfp.py's /clips-nonpkpd-preview)."""
+    files = []
+    for p in paths:
+        try:
+            files.append(parse_one(p))
+        except Exception as e:
+            files.append({
+                'path': p,
+                'name': Path(p).name,
+                'doc_type': None,
+                'effective_doc_type': None,
+                'column': None,
+                'fields': {},
+                'error': str(e),
+            })
     unmapped = [f['name'] for f in files if not f['column']]
     return {'files': files, 'unmapped': unmapped}
 

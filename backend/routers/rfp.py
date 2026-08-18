@@ -180,9 +180,17 @@ async def clips_nonpkpd_preview(body: ClipsNonPkpdPreviewRequest, x_session_id: 
     """HTTP equivalent of the Tauri desktop app's `preview_clips_nonpkpd_files` command --
     resolves each file id to its real session path and calls clips_nonpkpd_parser.parse_files()
     directly in-process (no subprocess needed at all, same reasoning as every other endpoint in
-    this router). Returns `{"files": [...], "unmapped": [...]}` unchanged."""
-    real_paths = [str(_find_session_file(x_session_id, p)) for p in body.paths]
-    return clips_nonpkpd_parse_files(real_paths)
+    this router). Returns `{"files": [...], "unmapped": [...]}` unchanged -- parse_files() itself
+    already isolates a single file's extraction failure (reported via that file's own `error`
+    field) from the rest of the batch. This try/except is for anything before/around that --
+    e.g. _find_session_file() failing to resolve a file id -- so the whole request still comes
+    back as a normal, readable error instead of a bare 500 with no detail (matches
+    /generate-rfp's own error-wrapping pattern above)."""
+    try:
+        real_paths = [str(_find_session_file(x_session_id, p)) for p in body.paths]
+        return clips_nonpkpd_parse_files(real_paths)
+    except Exception as exc:  # noqa: BLE001 - surfaced to the user as a normal error response
+        raise HTTPException(500, f"CLIPS/Non-PKPD preview failed: {exc}") from exc
 
 
 class PreviewPreviousRfpRequest(CamelModel):
@@ -197,8 +205,15 @@ async def preview_previous_rfp(body: PreviewPreviousRfpRequest, x_session_id: st
     `{table_role: {"table_idx", "columns": [...], "rows": {...}}, ...}` (see
     build_specimen.py's own docstring for the exact shape) so the frontend can render a
     per-table column-selection checklist instead of today's fully-silent auto-parse."""
-    real_path = str(_find_session_file(x_session_id, body.path))
-    return build_specimen_preview(real_path)
+    try:
+        real_path = str(_find_session_file(x_session_id, body.path))
+        return build_specimen_preview(real_path)
+    except Exception as exc:  # noqa: BLE001 - surfaced to the user as a normal error response,
+        # same reasoning as /clips-nonpkpd-preview above -- build_specimen.build() only guards
+        # its own docx.Document() open call; anything else (an unexpected table shape from a
+        # previous RFP that predates/postdates this template, etc.) would otherwise 500 with no
+        # detail instead of a message the frontend's own catch block can show.
+        raise HTTPException(500, f"Previous RFP preview failed: {exc}") from exc
 
 
 class FabricDesignFieldsRequest(CamelModel):
