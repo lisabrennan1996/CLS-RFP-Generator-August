@@ -2203,14 +2203,16 @@
       btn.textContent = 'Loading tables…';
       try {
         state.previousRfpPreview = JSON.parse(await invoke('preview_previous_rfp', { path: picked.path }));
-        // Default the selection to whichever columns actually have real data in this
-        // previous RFP -- still fully editable, this is just a starting point so the
-        // common case (bring over everything that was filled in) needs no clicking.
-        // Only computed on a successful preview -- see the catch below for why a
-        // failed preview must NOT leave this as an empty (but non-null) object.
+        // Nothing is pre-included -- every column starts excluded, regardless of has_data,
+        // so only what you actually click to include ends up in the output. Per direct
+        // instruction: a has-data-based default let columns into the RFP that were never
+        // explicitly chosen, which is exactly the opposite of what this selection UI is for.
+        // has_data still drives the "(no data)" hint text in the grid, just not the default
+        // selection state. Only computed on a successful preview -- see the catch below for
+        // why a failed preview must NOT leave this as an empty (but non-null) object.
         state.previousRfpColumnSelection = {};
-        for (const [tableRole, tableData] of Object.entries(state.previousRfpPreview)) {
-          state.previousRfpColumnSelection[tableRole] = tableData.columns.filter((c) => c.has_data).map((c) => c.key);
+        for (const tableRole of Object.keys(state.previousRfpPreview)) {
+          state.previousRfpColumnSelection[tableRole] = [];
         }
       } catch (err) {
         state.previousRfpPreview = null;
@@ -2552,24 +2554,33 @@
       // auto-detectable label; only the three identical "Limited use bmkr" columns share a
       // base_label, and auto-detect never returns that one).
       const keyForBaseLabel = (label) => (columns.find((c) => c.base_label === label) || {}).key || '';
+      // `column` is ONLY ever set by the dropdown's own change handler now (or preserved from
+      // a prior attach) -- never auto-populated from auto-detection. Per direct instruction:
+      // an auto-detected-but-never-looked-at guess should not silently make it into the RFP.
+      // The guess itself is kept as `suggestedColumn` purely for the dropdown's own hint text
+      // (see renderClipsNonPkpdList), so the user still sees it -- they just have to actually
+      // pick it (or something else) for it to count as chosen.
       state.clipsNonPkpdFiles = result.files.map((f, i) => ({
         path: entries[i].fileId,
         name: entries[i].name,
         docType: f.doc_type,
-        column: entries[i].column || keyForBaseLabel(f.column),
+        column: entries[i].column || null,
+        suggestedColumn: keyForBaseLabel(f.column) || null,
         fields: f.fields,
         error: f.error || null,
       }));
       renderClipsNonPkpdList();
       renderAttachmentsStatus();
       // Built from the final state (real names) rather than result.unmapped (garbled
-      // on-disk names -- see above).
+      // on-disk names -- see above). Includes files with an auto-detected suggestion that
+      // hasn't actually been picked yet, not just ones auto-detect couldn't guess at all --
+      // per direct instruction, an unconfirmed guess must not silently make it into the RFP.
       const unmappedNames = state.clipsNonPkpdFiles.filter((f) => !f.column).map((f) => f.name);
       if (unmappedNames.length) {
         showToast(
-          `Could not auto-detect a Referral/Storage column for: ${unmappedNames.join(', ')} ` +
-            `— data was still extracted from these file(s), pick a column for each from the dropdown ` +
-            `so they're included when the RFP is generated.`,
+          `Pick (or confirm) a Referral/Storage column for: ${unmappedNames.join(', ')} ` +
+            `— data was still extracted from these file(s), but a column choice must be actively ` +
+            `made from the dropdown for each one so it's included when the RFP is generated.`,
           'error'
         );
       }
@@ -2615,7 +2626,17 @@
       select.className = 'text-input';
       const blankOpt = document.createElement('option');
       blankOpt.value = '';
-      blankOpt.textContent = file.column ? '(unassign)' : 'Choose column…';
+      // The auto-detected guess is shown as a hint here, not applied automatically -- the
+      // dropdown always starts on this blank option regardless of suggestedColumn, so picking
+      // (even re-picking the suggested one) is a real, explicit action that fires 'change'.
+      const suggestedLabel = file.suggestedColumn
+        ? (columns.find((c) => c.key === file.suggestedColumn) || {}).display_label
+        : null;
+      blankOpt.textContent = file.column
+        ? '(unassign)'
+        : suggestedLabel
+          ? `Choose column… (suggested: ${suggestedLabel})`
+          : 'Choose column…';
       select.appendChild(blankOpt);
       [
         ['Referral Lab', referralCols],
