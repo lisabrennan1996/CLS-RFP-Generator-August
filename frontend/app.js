@@ -56,19 +56,39 @@
       input.accept = accept;
       input.style.display = 'none';
       document.body.appendChild(input);
-      const cleanup = () => input.remove();
-      input.addEventListener('change', () => {
+      let settled = false;
+      const cleanup = () => {
+        input.remove();
+        window.removeEventListener('focus', onFocus);
+      };
+      const onChange = () => {
+        if (settled) return;
         const file = input.files && input.files[0];
+        settled = true;
         cleanup();
         if (!file) reject(new Error('No file selected'));
         else resolve(file);
-      });
-      window.addEventListener(
-        'focus',
-        () => setTimeout(() => { if (document.body.contains(input)) { cleanup(); reject(new Error('No file selected')); } }, 300),
-        { once: true }
-      );
-      document.body.appendChild(input);
+      };
+      const onCancel = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error('No file selected'));
+      };
+      // Modern Chromium/Edge fire a native 'cancel' event on the input when the file dialog is
+      // dismissed with no selection -- the reliable signal to use. The window 'focus' listener
+      // below is a fallback ONLY, for a browser old enough to lack 'cancel' -- it used to be
+      // the ONLY detection mechanism, racing a 300ms timer against the dialog's own 'change'
+      // event. Confirmed directly as a real bug: a real file selection whose 'change' is
+      // delayed past 300ms (slower machine, antivirus scanning the picker, plain OS timing)
+      // got misdetected as "cancelled" -- and since isCancelled() suppresses the error toast
+      // for exactly that message, the whole attach action silently did nothing, which reads
+      // identically to "the file wasn't accepted." Given 'cancel' now handles the fast/common
+      // path, this fallback's window can be generous without making a real cancel feel laggy.
+      const onFocus = () => setTimeout(() => { if (!settled && document.body.contains(input)) onCancel(); }, 1500);
+      input.addEventListener('change', onChange, { once: true });
+      input.addEventListener('cancel', onCancel, { once: true });
+      window.addEventListener('focus', onFocus, { once: true });
       input.click();
     });
   }
@@ -104,19 +124,41 @@
   // at #clipsNonPkpdFileInput, or rejects with "No file selected" if the dialog is dismissed.
   function pickMultipleFilesViaInput(input) {
     return new Promise((resolve, reject) => {
+      let settled = false;
       const cleanup = () => {
         input.removeEventListener('change', onChange);
+        input.removeEventListener('cancel', onCancel);
         window.removeEventListener('focus', onFocus);
       };
       const onChange = () => {
-        const files = input.files;
+        if (settled) return;
+        // input.files is a LIVE reference, not a snapshot -- confirmed directly: clearing
+        // input.value below (needed so this persistent, reusable input can be attached-to
+        // again later) retroactively empties this SAME FileList object, so checking
+        // files.length after that point is always 0 regardless of what was actually picked.
+        // This was the real, 100%-reproducible cause of CLIPS/Non-PKPD attachment silently
+        // doing nothing -- materialize a real array of the File objects themselves (which
+        // aren't affected by clearing the input) before touching .value at all.
+        const files = input.files && input.files.length ? Array.from(input.files) : null;
+        settled = true;
         cleanup();
         input.value = '';
-        if (!files || !files.length) reject(new Error('No file selected'));
+        if (!files) reject(new Error('No file selected'));
         else resolve(files);
       };
-      const onFocus = () => setTimeout(() => { cleanup(); reject(new Error('No file selected')); }, 300);
+      const onCancel = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        input.value = '';
+        reject(new Error('No file selected'));
+      };
+      // See pickFileViaInput()'s own comment -- same fix, same reason: the native 'cancel'
+      // event is the reliable signal, the focus-based timer is a long-window fallback only,
+      // not a 300ms race against a real (possibly delayed) 'change' event.
+      const onFocus = () => setTimeout(() => { if (!settled) onCancel(); }, 1500);
       input.addEventListener('change', onChange, { once: true });
+      input.addEventListener('cancel', onCancel, { once: true });
       window.addEventListener('focus', onFocus, { once: true });
       input.click();
     });
@@ -2479,11 +2521,27 @@
       btn.textContent = 'Uploading…';
       const uploaded = await uploadMultiFilesToServer(files);
       btn.textContent = 'Extracting…';
-      const existingPaths = state.clipsNonPkpdFiles.map((f) => f.path);
-      const newPaths = uploaded.map((f) => f.file_id).filter((p) => !existingPaths.includes(p));
-      if (!newPaths.length) return;
-      const allPaths = [...existingPaths, ...newPaths];
-      const raw = await invoke('preview_clips_nonpkpd_files', { paths: allPaths });
+      // `state.clipsNonPkpdFiles[i].path` must stay the bare session file id (what
+      // /api/upload-multi returned, and what generate-rfp's own _find_session_file()
+      // re-resolves later via a `{file_id}.*` glob) -- NOT result.files[i].path below, which
+      // is the server's already-resolved absolute on-disk path for that same file. Confirmed
+      // directly: passing that absolute path back into _find_session_file() at generate time
+      // builds a glob pattern that can never match anything, since the two are entirely
+      // different strings for the same file. Likewise result.files[i].name is derived from
+      // that resolved path (Path(path).name), not the name the user actually picked -- a
+      // meaningless hex string in its place reads exactly like "the file wasn't accepted"
+      // even when extraction succeeded. `entries` keeps both the correct id and the real
+      // name (plus any prior manual column choice) alongside each request, in the same
+      // order as `paths`, so result.files[i] can be zipped back to entries[i] by position
+      // rather than by trying to match on either of those server-derived fields.
+      const existingEntries = state.clipsNonPkpdFiles.map((f) => ({ fileId: f.path, name: f.name, column: f.column }));
+      const existingIds = new Set(existingEntries.map((e) => e.fileId));
+      const newEntries = uploaded
+        .filter((f) => !existingIds.has(f.file_id))
+        .map((f) => ({ fileId: f.file_id, name: f.name, column: null }));
+      if (!newEntries.length) return;
+      const entries = [...existingEntries, ...newEntries];
+      const raw = await invoke('preview_clips_nonpkpd_files', { paths: entries.map((e) => e.fileId) });
       const result = JSON.parse(raw);
       if (result.status === 'error') {
         showToast('Could not extract CLIPS/Non-PKPD file(s): ' + result.message, 'error');
@@ -2494,25 +2552,11 @@
       // auto-detectable label; only the three identical "Limited use bmkr" columns share a
       // base_label, and auto-detect never returns that one).
       const keyForBaseLabel = (label) => (columns.find((c) => c.base_label === label) || {}).key || '';
-      const manualColumnByPath = new Map(state.clipsNonPkpdFiles.map((f) => [f.path, f.column]));
-      // result.files[i].name is derived server-side from the file's on-disk SESSION path
-      // (a random file id, e.g. "861cae7450f4....pdf"), not the name the user actually
-      // picked -- confirmed directly (clips_nonpkpd_parser.parse_one() does
-      // Path(path).name on the resolved session path, which was never the original
-      // filename). The real name only exists here, in this attach call's own `uploaded`
-      // response (new files) or an already-attached file's own prior state entry
-      // (existing files); use those instead, or the list shows a meaningless hex string
-      // in place of the real filename, which reads exactly like "the file wasn't
-      // accepted" even when extraction actually succeeded.
-      const originalNameByPath = new Map([
-        ...state.clipsNonPkpdFiles.map((f) => [f.path, f.name]),
-        ...uploaded.map((f) => [f.file_id, f.name]),
-      ]);
-      state.clipsNonPkpdFiles = result.files.map((f) => ({
-        path: f.path,
-        name: originalNameByPath.get(f.path) || f.name,
+      state.clipsNonPkpdFiles = result.files.map((f, i) => ({
+        path: entries[i].fileId,
+        name: entries[i].name,
         docType: f.doc_type,
-        column: manualColumnByPath.has(f.path) ? manualColumnByPath.get(f.path) : keyForBaseLabel(f.column),
+        column: entries[i].column || keyForBaseLabel(f.column),
         fields: f.fields,
         error: f.error || null,
       }));
